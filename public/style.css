@@ -495,8 +495,12 @@ button {
 .overworld-entity {
   position: absolute;
   transform: translate(-0%, -15%);
-  transition: left 0.1s linear, top 0.1s linear;
 }
+
+/* 몬스터 배회는 100ms 간격으로만 좌표가 갱신되므로, 그 사이를 부드럽게 이어주는 보간을 넣는다.
+   플레이어/원격 플레이어는 매 프레임(rAF)마다 좌표가 갱신되므로 여기에 트랜지션을 넣으면
+   오히려 입력이 밀리는 느낌(부자연스러운 움직임)이 나서 몬스터에만 적용한다. */
+.wander-entity { transition: left 0.1s linear, top 0.1s linear; }
 
 .overworld-entity.targetable { filter: drop-shadow(0 0 6px rgba(212,175,106,0.85)); }
 

@@ -348,7 +348,7 @@ export function OverworldScreen({
           return (
             <div
               key={spawn.instanceId}
-              className={`overworld-entity${isTarget ? " targetable" : ""}`}
+              className={`overworld-entity wander-entity${isTarget ? " targetable" : ""}`}
               style={{ left: w?.x ?? spawn.x, top: w?.y ?? spawn.y }}
             >
               <MonsterSprite kind={spawn.monsterId} scale={3.2} />
