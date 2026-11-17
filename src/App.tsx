@@ -7,7 +7,8 @@ import { OverworldScreen, type QuestStatus } from "./screens/OverworldScreen";
 import { CombatScreen } from "./screens/CombatScreen";
 import { CoopCombatScreen } from "./screens/CoopCombatScreen";
 import { getMonster } from "./data/monsters";
-import { QUESTS } from "./data/quests";
+import { JOB_QUESTS } from "./data/quests";
+import { DUNGEON_PORTALS, MONSTER_RESPAWN_MS, MONSTER_SPAWNS } from "./data/overworld";
 import { computeStats, gainXp, maybeEquip } from "./combat/growth";
 import { getEquipment } from "./data/equipment";
 import type { CombatResult } from "./combat/useCombat";
@@ -79,7 +80,7 @@ export function App() {
       else if (monsterDef.isBoss) messages.push(`${itemName} 획득! (이미 더 좋은 장비 보유)`);
     }
 
-    const quest = QUESTS[questIndex];
+    const quest = JOB_QUESTS[base.job.id][questIndex];
     if (quest && (!quest.targetMonsterId || quest.targetMonsterId === monsterId)) {
       const nextCount = questKillCount + 1;
       if (nextCount >= quest.targetCount) {
@@ -156,7 +157,10 @@ export function App() {
   }
 
   function handleEncounter(instanceId: string, monsterId: MonsterId) {
-    const coop = !!multiplayer && mp.status === "connected";
+    // 보스(던전 입구) 전투만 같은 방의 친구와 함께 싸운다. 들판의 슬라임/고블린은
+    // 직업별 초반 퀘스트 대상이라 멀티플레이 중이어도 각자 혼자 처치한다.
+    const isBossEncounter = DUNGEON_PORTALS.some((p) => p.instanceId === instanceId);
+    const coop = isBossEncounter && !!multiplayer && mp.status === "connected";
     setEncounter({ instanceId, monsterId, mode: coop ? "coop" : "solo" });
     setScreen("combat");
   }
@@ -170,7 +174,15 @@ export function App() {
       showToast(messages.join("  ·  "));
       setPlayer(updated);
       persistCharacter(updated);
-      setClearedInstanceIds((prev) => [...prev, encounter.instanceId]);
+      const instanceId = encounter.instanceId;
+      setClearedInstanceIds((prev) => (prev.includes(instanceId) ? prev : [...prev, instanceId]));
+      // 들판 몬스터(슬라임/고블린)는 일정 시간 뒤 다시 나타난다. 던전 보스는 포탈 자체가
+      // clearedInstanceIds로 가려지지 않으므로 그대로 둬도 반복 도전이 가능하다.
+      if (MONSTER_SPAWNS.some((s) => s.instanceId === instanceId)) {
+        setTimeout(() => {
+          setClearedInstanceIds((prev) => prev.filter((id) => id !== instanceId));
+        }, MONSTER_RESPAWN_MS);
+      }
     } else {
       const stats = computeStats(player);
       const revived = { ...player, hp: stats.maxHp };
@@ -189,9 +201,10 @@ export function App() {
     setScreen("overworld");
   }
 
-  const questsComplete = questIndex >= QUESTS.length;
+  const jobQuests = player ? JOB_QUESTS[player.job.id] : [];
+  const questsComplete = questIndex >= jobQuests.length;
 
-  const quest = QUESTS[questIndex];
+  const quest = jobQuests[questIndex];
   const questStatus: QuestStatus | null = player
     ? quest
       ? { title: quest.title, description: quest.description, progress: questKillCount, target: quest.targetCount, done: false }

@@ -5,6 +5,10 @@ export const MAP_HEIGHT = 420;
 export const PLAYER_SPEED = 160; // px/sec
 export const PLAYER_SIZE = 56; // 충돌 판정용 대략 크기 (스프라이트보다 살짝 작게)
 export const MONSTER_SIZE = 56;
+export const MONSTER_WANDER_SPEED = 32; // px/sec, 플레이어보다 훨씬 느리게 배회
+export const MONSTER_WANDER_RADIUS = 70; // 홈 지점(스폰 좌표) 기준 배회 반경
+export const INTERACT_RANGE = 46; // 이 거리 안에 들어오면 E키로 상호작용 가능
+export const MONSTER_RESPAWN_MS = 14000; // 처치 후 다시 나타나기까지 걸리는 시간
 
 export interface MonsterSpawn {
   instanceId: string;
@@ -13,6 +17,8 @@ export interface MonsterSpawn {
   y: number;
 }
 
+// 각 항목의 (x, y)는 "홈 지점"이다. 실제 화면 위치는 이 지점을 중심으로
+// 느리게 배회하며, 처치하면 일정 시간 뒤 같은 홈 지점 주변에 다시 나타난다.
 export const MONSTER_SPAWNS: MonsterSpawn[] = [
   { instanceId: "enc_slime_1", monsterId: "forest_slime", x: 520, y: 120 },
   { instanceId: "enc_slime_2", monsterId: "forest_slime", x: 160, y: 300 },

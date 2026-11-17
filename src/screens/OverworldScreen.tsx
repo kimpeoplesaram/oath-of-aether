@@ -3,10 +3,13 @@ import { CharacterSprite, MonsterSprite } from "../render/SpriteCanvas";
 import type { Direction } from "../render/sprites";
 import {
   DUNGEON_PORTALS,
+  INTERACT_RANGE,
   MAP_HEIGHT,
   MAP_WIDTH,
   MONSTER_SIZE,
   MONSTER_SPAWNS,
+  MONSTER_WANDER_RADIUS,
+  MONSTER_WANDER_SPEED,
   PLAYER_SIZE,
   PLAYER_SPEED,
   TREE_DECORATIONS,
@@ -58,6 +61,21 @@ const MOVE_KEYS: Record<string, { dx: number; dy: number; dir: Direction }> = {
   d: { dx: 1, dy: 0, dir: "right" },
 };
 
+interface WanderState {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  nextTurnAt: number;
+}
+
+function randomWanderVelocity(): { vx: number; vy: number } {
+  const angle = Math.random() * Math.PI * 2;
+  return { vx: Math.cos(angle) * MONSTER_WANDER_SPEED, vy: Math.sin(angle) * MONSTER_WANDER_SPEED };
+}
+
+type Interactable = { kind: "monster"; instanceId: string; monsterId: MonsterId } | { kind: "portal"; instanceId: string; monsterId: MonsterId };
+
 export function OverworldScreen({
   player,
   stats,
@@ -77,10 +95,19 @@ export function OverworldScreen({
   const [pos, setPos] = useState({ x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2 });
   const [direction, setDirection] = useState<Direction>("down");
   const [moving, setMoving] = useState(false);
+  const [monsterWander, setMonsterWander] = useState<Record<string, WanderState>>(() => {
+    const init: Record<string, WanderState> = {};
+    for (const spawn of MONSTER_SPAWNS) {
+      init[spawn.instanceId] = { x: spawn.x, y: spawn.y, ...randomWanderVelocity(), nextTurnAt: 0 };
+    }
+    return init;
+  });
+  const [target, setTarget] = useState<Interactable | null>(null);
 
   const pressedKeys = useRef<Set<string>>(new Set());
   const encounterLockRef = useRef(false);
-  const portalLockRefs = useRef<Map<string, boolean>>(new Map());
+  const targetRef = useRef<Interactable | null>(null);
+  targetRef.current = target;
 
   // 위치/방향이 바뀔 때마다 서버로 전송 (연결돼 있을 때만 실제로 전송됨)
   // 체력/레벨도 함께 보내 파티 HUD가 전투 밖에서도 최신 상태를 보여줄 수 있게 한다.
@@ -89,9 +116,23 @@ export function OverworldScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pos.x, pos.y, direction, moving, player.hp, stats.maxHp, player.level]);
 
+  // 항상 최신 props/state를 참조하도록 ref에 보관해, 키 이벤트 리스너는 한 번만 등록한다.
+  const tryInteractRef = useRef<() => void>(() => {});
+  tryInteractRef.current = () => {
+    const t = targetRef.current;
+    if (!t || encounterLockRef.current) return;
+    if (t.kind === "portal" && !questsComplete) {
+      onPortalLocked();
+      return;
+    }
+    encounterLockRef.current = true;
+    onEncounter(t.instanceId, t.monsterId);
+  };
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (MOVE_KEYS[e.key]) pressedKeys.current.add(e.key);
+      if (e.key === "e" || e.key === "E") tryInteractRef.current();
     }
     function onKeyUp(e: KeyboardEvent) {
       pressedKeys.current.delete(e.key);
@@ -141,48 +182,78 @@ export function OverworldScreen({
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // 충돌(조우) 판정
+  // 몬스터 배회(wander) 갱신: 살아있는 몬스터는 홈 지점 주변을 느리게 돌아다니고,
+  // 처치된(clearedInstanceIds에 포함된) 몬스터는 홈 지점에서 멈춘 채 대기한다
+  // (부모에서 일정 시간 뒤 clearedInstanceIds에서 제거되면 자동으로 다시 움직인다 = 리스폰).
   useEffect(() => {
-    if (encounterLockRef.current) return;
+    let last = Date.now();
+    const id = setInterval(() => {
+      const now = Date.now();
+      const dt = Math.min(0.3, (now - last) / 1000);
+      last = now;
+      setMonsterWander((prev) => {
+        const next: Record<string, WanderState> = {};
+        for (const spawn of MONSTER_SPAWNS) {
+          if (clearedInstanceIds.includes(spawn.instanceId)) {
+            next[spawn.instanceId] = { x: spawn.x, y: spawn.y, vx: 0, vy: 0, nextTurnAt: 0 };
+            continue;
+          }
+          const w = prev[spawn.instanceId] ?? { x: spawn.x, y: spawn.y, ...randomWanderVelocity(), nextTurnAt: 0 };
+          let { x, y, vx, vy, nextTurnAt } = w;
+          if (now >= nextTurnAt) {
+            const v = randomWanderVelocity();
+            vx = v.vx;
+            vy = v.vy;
+            nextTurnAt = now + 2000 + Math.random() * 2500;
+          }
+          let nx = x + vx * dt;
+          let ny = y + vy * dt;
+          if (Math.hypot(nx - spawn.x, ny - spawn.y) > MONSTER_WANDER_RADIUS) {
+            const angle = Math.atan2(spawn.y - y, spawn.x - x);
+            vx = Math.cos(angle) * MONSTER_WANDER_SPEED;
+            vy = Math.sin(angle) * MONSTER_WANDER_SPEED;
+            nx = x + vx * dt;
+            ny = y + vy * dt;
+          }
+          nx = Math.max(0, Math.min(MAP_WIDTH - MONSTER_SIZE, nx));
+          ny = Math.max(0, Math.min(MAP_HEIGHT - MONSTER_SIZE, ny));
+          next[spawn.instanceId] = { x: nx, y: ny, vx, vy, nextTurnAt };
+        }
+        return next;
+      });
+    }, 100);
+    return () => clearInterval(id);
+  }, [clearedInstanceIds]);
+
+  // 플레이어 근처의 상호작용 대상(몬스터/던전 입구)을 찾는다 — 실제 전투 진입은 E키로만 일어난다
+  useEffect(() => {
+    const px = pos.x + PLAYER_SIZE / 2;
+    const py = pos.y + PLAYER_SIZE / 2;
+    let best: Interactable | null = null;
+    let bestDist = INTERACT_RANGE;
+
     for (const spawn of MONSTER_SPAWNS) {
       if (clearedInstanceIds.includes(spawn.instanceId)) continue;
-      const overlap =
-        pos.x < spawn.x + MONSTER_SIZE &&
-        pos.x + PLAYER_SIZE > spawn.x &&
-        pos.y < spawn.y + MONSTER_SIZE &&
-        pos.y + PLAYER_SIZE > spawn.y;
-      if (overlap) {
-        encounterLockRef.current = true;
-        onEncounter(spawn.instanceId, spawn.monsterId);
-        break;
+      const w = monsterWander[spawn.instanceId];
+      if (!w) continue;
+      const d = Math.hypot(px - (w.x + MONSTER_SIZE / 2), py - (w.y + MONSTER_SIZE / 2));
+      if (d < bestDist) {
+        bestDist = d;
+        best = { kind: "monster", instanceId: spawn.instanceId, monsterId: spawn.monsterId };
       }
     }
-  }, [pos, clearedInstanceIds, onEncounter]);
-
-  // 던전 입구(포탈) 충돌 판정 — 몬스터와 별개로, 퀘스트 완료 여부에 따라 잠김/열림이 갈린다
-  useEffect(() => {
     for (const portal of DUNGEON_PORTALS) {
-      const overlap =
-        pos.x < portal.x + portal.size &&
-        pos.x + PLAYER_SIZE > portal.x &&
-        pos.y < portal.y + portal.size &&
-        pos.y + PLAYER_SIZE > portal.y;
-
-      if (!overlap) {
-        portalLockRefs.current.set(portal.instanceId, false);
-        continue;
-      }
-      if (portalLockRefs.current.get(portal.instanceId)) continue;
-      portalLockRefs.current.set(portal.instanceId, true);
-
-      if (!questsComplete) {
-        onPortalLocked();
-      } else if (!encounterLockRef.current) {
-        encounterLockRef.current = true;
-        onEncounter(portal.instanceId, portal.monsterId);
+      const d = Math.hypot(px - (portal.x + portal.size / 2), py - (portal.y + portal.size / 2));
+      if (d < bestDist) {
+        bestDist = d;
+        best = { kind: "portal", instanceId: portal.instanceId, monsterId: portal.monsterId };
       }
     }
-  }, [pos, questsComplete, onEncounter, onPortalLocked]);
+    setTarget((cur) => {
+      if (cur && best && cur.instanceId === best.instanceId && cur.kind === best.kind) return cur;
+      return best;
+    });
+  }, [pos, monsterWander, clearedInstanceIds]);
 
   return (
     <div className="panel overworld-screen">
@@ -249,31 +320,42 @@ export function OverworldScreen({
           />
         ))}
 
-        {DUNGEON_PORTALS.map((portal) => (
-          <div
-            key={portal.instanceId}
-            className={`dungeon-portal${questsComplete ? " unlocked" : " locked"}`}
-            style={{
-              left: portal.x,
-              top: portal.y,
-              width: portal.size,
-              height: portal.size,
-            }}
-            title={questsComplete ? `던전 입구: ${portal.name}` : "모든 퀘스트를 완료해야 열립니다"}
-          >
-            <span className="dungeon-portal-icon">{questsComplete ? "🌀" : "🔒"}</span>
-          </div>
-        ))}
+        {DUNGEON_PORTALS.map((portal) => {
+          const isTarget = target?.kind === "portal" && target.instanceId === portal.instanceId;
+          return (
+            <div
+              key={portal.instanceId}
+              className={`dungeon-portal${questsComplete ? " unlocked" : " locked"}${isTarget ? " targetable" : ""}`}
+              style={{
+                left: portal.x,
+                top: portal.y,
+                width: portal.size,
+                height: portal.size,
+              }}
+              title={questsComplete ? `던전 입구: ${portal.name}` : "모든 퀘스트를 완료해야 열립니다"}
+            >
+              <span className="dungeon-portal-icon">{questsComplete ? "🌀" : "🔒"}</span>
+              {isTarget && (
+                <div className="interact-prompt">{questsComplete ? "E 입장" : "🔒 잠김"}</div>
+              )}
+            </div>
+          );
+        })}
 
-        {MONSTER_SPAWNS.filter((s) => !clearedInstanceIds.includes(s.instanceId)).map((spawn) => (
-          <div
-            key={spawn.instanceId}
-            className="overworld-entity"
-            style={{ left: spawn.x, top: spawn.y }}
-          >
-            <MonsterSprite kind={spawn.monsterId} scale={3.2} />
-          </div>
-        ))}
+        {MONSTER_SPAWNS.filter((s) => !clearedInstanceIds.includes(s.instanceId)).map((spawn) => {
+          const w = monsterWander[spawn.instanceId];
+          const isTarget = target?.kind === "monster" && target.instanceId === spawn.instanceId;
+          return (
+            <div
+              key={spawn.instanceId}
+              className={`overworld-entity${isTarget ? " targetable" : ""}`}
+              style={{ left: w?.x ?? spawn.x, top: w?.y ?? spawn.y }}
+            >
+              <MonsterSprite kind={spawn.monsterId} scale={3.2} />
+              {isTarget && <div className="interact-prompt">E 전투</div>}
+            </div>
+          );
+        })}
 
         {remotePlayers.map((rp) => (
           <div key={rp.id} className="overworld-entity remote-entity" style={{ left: rp.x, top: rp.y }}>
@@ -288,8 +370,8 @@ export function OverworldScreen({
       </div>
 
       <div className="overworld-hint">
-        방향키 또는 WASD로 이동 · 몬스터에게 다가가면 전투가 시작됩니다 · 퀘스트를 모두 완료하면 던전 입구 2곳(숲의 수호자/얼음 망령)이 열립니다
-        {multiplayerActive && " · 같은 몬스터에 다가간 친구와는 함께 싸웁니다"}
+        방향키 또는 WASD로 이동 · 몬스터나 던전 입구에 가까이 가서 E키를 누르면 전투가 시작됩니다 · 쓰러뜨린 몬스터는 잠시 후 다시 나타납니다 · 보스는 모든 퀘스트를 완료해야 도전할 수 있습니다
+        {multiplayerActive && " · 보스전은 같은 방에 있는 친구와 함께 싸웁니다"}
       </div>
     </div>
   );
