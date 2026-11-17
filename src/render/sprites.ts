@@ -6,7 +6,7 @@
 
 export type Direction = "down" | "up" | "left" | "right";
 export type CharKind = "warrior" | "priest" | "mage" | "archer" | "rogue" | "bard";
-export type MonsterKind = "forest_slime" | "goblin_raider" | "forest_guardian" | "ice_wraith";
+export type MonsterKind = "forest_slime" | "goblin_raider" | "forest_guardian" | "ice_wraith" | "lava_golem";
 
 export const SPRITE_UNIT_W = 16;
 export const SPRITE_UNIT_H = 18;
@@ -83,6 +83,7 @@ const MONSTER_PALETTES: Record<MonsterKind, MonsterPalette> = {
   goblin_raider: { body: "#7a8a4a", shade: "#566035", eye: "#d8304a", accent: "#6b4a2e" },
   forest_guardian: { body: "#6b4a2e", shade: "#3f2d1c", eye: "#8ff0e8", accent: "#4a7a3a" },
   ice_wraith: { body: "#aee4f0", shade: "#6fb6cc", eye: "#1b3a4a", accent: "#e8fbff" },
+  lava_golem: { body: "#4a3228", shade: "#2a1c16", eye: "#ff8a3d", accent: "#ff5a2e" },
 };
 
 function px(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string) {
@@ -229,5 +230,21 @@ export function drawMonster(ctx: CanvasRenderingContext2D, kind: MonsterKind, fr
     px(ctx, 9, 6 + drift, 2, 2, p.eye);
     // 가장자리 음영
     px(ctx, 3, 9 + drift, 10, 1, p.shade);
+  } else if (kind === "lava_golem") {
+    const bob = frame === 1 ? 1 : 0;
+    // 육중한 돌/용암 몸통
+    px(ctx, 3, 5 + bob, 10, 7, p.body);
+    px(ctx, 2, 7 + bob, 2, 4, p.body);
+    px(ctx, 12, 7 + bob, 2, 4, p.body);
+    // 갈라진 틈 사이로 보이는 용암(가슴 화구 + 균열)
+    px(ctx, 6, 7 + bob, 4, 3, p.accent);
+    px(ctx, 4, 6 + bob, 1, 1, p.accent);
+    px(ctx, 11, 9 + bob, 1, 1, p.accent);
+    // 눈
+    px(ctx, 5, 6 + bob, 2, 1, p.eye);
+    px(ctx, 9, 6 + bob, 2, 1, p.eye);
+    // 다리
+    px(ctx, 4, 12 + bob, 3, 3, p.shade);
+    px(ctx, 9, 12 + bob, 3, 3, p.shade);
   }
 }

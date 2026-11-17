@@ -39,6 +39,13 @@ export const EQUIPMENT: EquipmentItem[] = [
   { id: "wep_frost_dagger", name: "서리한 단검", slot: "weapon", jobId: "rogue", atkBonus: 20 },
   { id: "wep_frost_lute", name: "서리한 류트", slot: "weapon", jobId: "bard", atkBonus: 20 },
   { id: "armor_frost", name: "서리한 갑주", slot: "armor", hpBonus: 70 },
+  { id: "wep_magma_sword", name: "마그마 대검", slot: "weapon", jobId: "warrior", atkBonus: 26 },
+  { id: "wep_magma_symbol", name: "마그마 성표", slot: "weapon", jobId: "priest", atkBonus: 26 },
+  { id: "wep_magma_staff", name: "마그마 지팡이", slot: "weapon", jobId: "mage", atkBonus: 26 },
+  { id: "wep_magma_bow", name: "마그마 장궁", slot: "weapon", jobId: "archer", atkBonus: 26 },
+  { id: "wep_magma_dagger", name: "마그마 단검", slot: "weapon", jobId: "rogue", atkBonus: 26 },
+  { id: "wep_magma_lute", name: "마그마 류트", slot: "weapon", jobId: "bard", atkBonus: 26 },
+  { id: "armor_magma", name: "마그마 갑주", slot: "armor", hpBonus: 95 },
 ];
 
 export function getEquipment(id: string | undefined): EquipmentItem | undefined {

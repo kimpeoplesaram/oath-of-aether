@@ -84,7 +84,7 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
                   enc.pendingAttack?.targetId === p.id ? " targeted" : ""
                 }${selfAnimClass}`}
               >
-                <CharacterSprite kind={p.jobId} direction="right" scale={5} />
+                <CharacterSprite kind={p.jobId} direction="right" scale={6} />
                 {enc.pendingAttack?.targetId === p.id && <div className="target-marker">⚠</div>}
               </div>
             );
@@ -96,7 +96,7 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
             monsterAnim === "attack" ? " anim-attack-left" : monsterAnim === "dodge" ? " anim-dodge" : ""
           }`}
         >
-          <MonsterSprite kind={monsterId} flip scale={monster.isBoss ? 9 : 7} />
+          <MonsterSprite kind={monsterId} flip scale={monster.isBoss ? 11 : 8} />
         </div>
       </div>
       {monster.isBoss && <div className="boss-banner">⚔ 보스전: {monster.name}</div>}

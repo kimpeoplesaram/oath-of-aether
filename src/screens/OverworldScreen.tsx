@@ -320,6 +320,41 @@ export function OverworldScreen({
           />
         ))}
 
+        <div className="minimap">
+          <div className="minimap-label">지도</div>
+          {DUNGEON_PORTALS.map((portal) => (
+            <div
+              key={portal.instanceId}
+              className={`minimap-dot minimap-portal${questsComplete ? "" : " locked"}`}
+              style={{ left: `${(portal.x / MAP_WIDTH) * 100}%`, top: `${(portal.y / MAP_HEIGHT) * 100}%` }}
+              title={portal.name}
+            />
+          ))}
+          {MONSTER_SPAWNS.filter((s) => !clearedInstanceIds.includes(s.instanceId)).map((spawn) => {
+            const w = monsterWander[spawn.instanceId];
+            const x = w?.x ?? spawn.x;
+            const y = w?.y ?? spawn.y;
+            return (
+              <div
+                key={spawn.instanceId}
+                className="minimap-dot minimap-monster"
+                style={{ left: `${(x / MAP_WIDTH) * 100}%`, top: `${(y / MAP_HEIGHT) * 100}%` }}
+              />
+            );
+          })}
+          {remotePlayers.map((rp) => (
+            <div
+              key={rp.id}
+              className="minimap-dot minimap-remote"
+              style={{ left: `${(rp.x / MAP_WIDTH) * 100}%`, top: `${(rp.y / MAP_HEIGHT) * 100}%` }}
+            />
+          ))}
+          <div
+            className="minimap-dot minimap-player"
+            style={{ left: `${(pos.x / MAP_WIDTH) * 100}%`, top: `${(pos.y / MAP_HEIGHT) * 100}%` }}
+          />
+        </div>
+
         {DUNGEON_PORTALS.map((portal) => {
           const isTarget = target?.kind === "portal" && target.instanceId === portal.instanceId;
           return (
@@ -351,7 +386,7 @@ export function OverworldScreen({
               className={`overworld-entity wander-entity${isTarget ? " targetable" : ""}`}
               style={{ left: w?.x ?? spawn.x, top: w?.y ?? spawn.y }}
             >
-              <MonsterSprite kind={spawn.monsterId} scale={3.2} />
+              <MonsterSprite kind={spawn.monsterId} scale={3.8} />
               {isTarget && <div className="interact-prompt">E 전투</div>}
             </div>
           );
@@ -360,12 +395,12 @@ export function OverworldScreen({
         {remotePlayers.map((rp) => (
           <div key={rp.id} className="overworld-entity remote-entity" style={{ left: rp.x, top: rp.y }}>
             <span className="remote-name-tag">{rp.name}</span>
-            <CharacterSprite kind={rp.jobId} direction={rp.dir} moving={rp.moving} scale={3.2} />
+            <CharacterSprite kind={rp.jobId} direction={rp.dir} moving={rp.moving} scale={3.8} />
           </div>
         ))}
 
         <div className="overworld-entity player-entity" style={{ left: pos.x, top: pos.y }}>
-          <CharacterSprite kind={player.job.id} direction={direction} moving={moving} scale={3.2} />
+          <CharacterSprite kind={player.job.id} direction={direction} moving={moving} scale={3.8} />
         </div>
       </div>
 

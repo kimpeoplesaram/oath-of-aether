@@ -39,4 +39,14 @@ export const MONSTERS = {
       { telegraphText: "망령이 주변 전체에 눈보라를 일으킵니다!", dodgePhrase: "숨을 참고 눈보라 견디기", damage: 30, windupMs: 4200 },
     ],
   },
+  lava_golem: {
+    name: "용암 골렘",
+    hp: 460,
+    attackIntervalMs: 7000,
+    attacks: [
+      { telegraphText: "골렘의 몸에서 균열이 벌어지며 용암이 솟구칩니다!", dodgePhrase: "갈라진 틈을 피해 물러서기", damage: 26, windupMs: 3800 },
+      { telegraphText: "골렘이 불타는 주먹으로 땅을 내리찍으려 합니다!", dodgePhrase: "충격파가 오기 전에 뛰어오르기", damage: 32, windupMs: 3400 },
+      { telegraphText: "골렘이 가슴의 화구에서 열기를 내뿜습니다!", dodgePhrase: "뜨거운 숨결 피해 몸을 돌리기", damage: 34, windupMs: 4400 },
+    ],
+  },
 };

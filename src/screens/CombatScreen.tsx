@@ -49,7 +49,7 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
             playerAnim === "attack" ? " anim-attack-right" : playerAnim === "dodge" ? " anim-dodge" : ""
           }`}
         >
-          <CharacterSprite kind={player.job.id} direction="right" scale={7} />
+          <CharacterSprite kind={player.job.id} direction="right" scale={8} />
         </div>
         <div className="battle-ground" />
         <div
@@ -57,7 +57,7 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
             monsterAnim === "attack" ? " anim-attack-left" : monsterAnim === "dodge" ? " anim-dodge" : ""
           }`}
         >
-          <MonsterSprite kind={monster.id} flip scale={monster.isBoss ? 9 : 7} />
+          <MonsterSprite kind={monster.id} flip scale={monster.isBoss ? 11 : 8} />
         </div>
       </div>
       {monster.isBoss && <div className="boss-banner">⚔ 보스전: {monster.name}</div>}

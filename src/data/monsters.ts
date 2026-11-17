@@ -135,6 +135,47 @@ export const MONSTERS: MonsterDefinition[] = [
       },
     ],
   },
+  {
+    id: "lava_golem",
+    name: "용암 골렘",
+    icon: "🌋",
+    hp: 460,
+    attackIntervalMs: 7000,
+    xpReward: 360,
+    isBoss: true,
+    lootTable: [
+      "wep_magma_sword",
+      "wep_magma_symbol",
+      "wep_magma_staff",
+      "wep_magma_bow",
+      "wep_magma_dagger",
+      "wep_magma_lute",
+      "armor_magma",
+    ],
+    attacks: [
+      {
+        id: "golem_eruption",
+        telegraphText: "골렘의 몸에서 균열이 벌어지며 용암이 솟구칩니다!",
+        dodgePhrase: "갈라진 틈을 피해 물러서기",
+        damage: 26,
+        windupMs: 3800,
+      },
+      {
+        id: "golem_slam",
+        telegraphText: "골렘이 불타는 주먹으로 땅을 내리찍으려 합니다!",
+        dodgePhrase: "충격파가 오기 전에 뛰어오르기",
+        damage: 32,
+        windupMs: 3400,
+      },
+      {
+        id: "golem_breath",
+        telegraphText: "골렘이 가슴의 화구에서 열기를 내뿜습니다!",
+        dodgePhrase: "뜨거운 숨결 피해 몸을 돌리기",
+        damage: 34,
+        windupMs: 4400,
+      },
+    ],
+  },
 ];
 
 export function getMonster(id: MonsterId): MonsterDefinition {

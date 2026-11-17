@@ -212,7 +212,11 @@ export function App() {
     : null;
 
   return (
-    <div className={`app-shell${screen === "login" ? " app-shell-wide" : ""}`}>
+    <div
+      className={`app-shell${
+        screen === "login" ? " app-shell-wide" : screen === "overworld" || screen === "combat" ? " app-shell-game" : ""
+      }`}
+    >
       {screen === "title" && (
         <TitleScreen
           onStart={() => setScreen("create")}

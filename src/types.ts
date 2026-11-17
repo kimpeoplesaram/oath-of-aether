@@ -34,7 +34,7 @@ export interface MonsterAttack {
   windupMs: number; // 입력 제한 시간
 }
 
-export type MonsterId = "forest_slime" | "goblin_raider" | "forest_guardian" | "ice_wraith";
+export type MonsterId = "forest_slime" | "goblin_raider" | "forest_guardian" | "ice_wraith" | "lava_golem";
 
 export interface MonsterDefinition {
   id: MonsterId;
