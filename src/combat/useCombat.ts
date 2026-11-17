@@ -8,6 +8,7 @@ import type {
   Skill,
 } from "../types";
 import { hasTypo, isPhraseComplete, pickAttack, pickSkill, resolveSkillEffect } from "./engine";
+import { rollCrit, useBattleEffects } from "./effects";
 
 export type CombatResult = "ongoing" | "victory" | "defeat";
 
@@ -45,6 +46,7 @@ export function useCombat(
   const [debuffUntil, setDebuffUntil] = useState(0);
   const [debuffRatio, setDebuffRatio] = useState(0);
   const debuffRef = useRef({ until: 0, ratio: 0 });
+  const { popups, shake, pushPopup, triggerShake } = useBattleEffects();
 
   const resultRef = useRef(result);
   resultRef.current = result;
@@ -109,6 +111,8 @@ export function useCombat(
         setPlayerHp((hp: number) => Math.max(0, hp - dmg));
         flash("player");
         triggerMonsterAnim("attack");
+        pushPopup("player", `-${dmg}`, "damage");
+        triggerShake(monsterDef.isBoss ? "big" : "small");
         pushLog(`회피 실패! ${dmg}의 피해를 입었습니다.`, "miss");
         setIncoming(null);
         incomingRef.current = null;
@@ -117,7 +121,7 @@ export function useCombat(
       }
     }, 50);
     return () => clearInterval(id);
-  }, [result, monsterDef, pushLog, flash, triggerMonsterAnim]);
+  }, [result, monsterDef, pushLog, flash, triggerMonsterAnim, pushPopup, triggerShake]);
 
   // 승패 판정
   useEffect(() => {
@@ -155,6 +159,7 @@ export function useCombat(
       if (isPhraseComplete(activeTarget, bounded)) {
         if (incomingRef.current) {
           pushLog(`"${incomingRef.current.attack.dodgePhrase}" 입력 성공! 공격을 회피했습니다.`, "hit");
+          pushPopup("player", "DODGE!", "dodge");
           triggerPlayerAnim("dodge");
           setIncoming(null);
           incomingRef.current = null;
@@ -167,28 +172,41 @@ export function useCombat(
             // 몬스터도 일정 확률로 공격을 회피한다 (플레이어의 회피와 대칭되는 연출)
             if (Math.random() < 0.15) {
               triggerMonsterAnim("dodge");
+              pushPopup("monster", "MISS", "miss");
               pushLog(`${monsterDef.name}이(가) 공격을 회피했습니다!`, "miss");
             } else {
-              const totalDamage = Math.round(effect.amount * (buffActive ? 1 + buffRatio : 1));
+              const buffed = Math.round(effect.amount * (buffActive ? 1 + buffRatio : 1));
+              const { amount: totalDamage, crit } = rollCrit(buffed);
               setMonsterHp((hp: number) => Math.max(0, hp - totalDamage));
               flash("monster");
-              pushLog(`${currentSkill.name}! ${totalDamage}의 피해를 입혔습니다.`, "hit");
+              pushPopup("monster", `-${totalDamage}`, crit ? "crit" : "damage");
+              triggerShake(crit ? "big" : "small");
+              pushLog(
+                crit
+                  ? `치명타! ${currentSkill.name}로 ${totalDamage}의 피해를 입혔습니다!`
+                  : `${currentSkill.name}! ${totalDamage}의 피해를 입혔습니다.`,
+                "hit"
+              );
             }
           } else if (effect.kind === "heal") {
             setPlayerHp((hp: number) => Math.min(stats.maxHp, hp + effect.amount));
+            pushPopup("player", `+${effect.amount}`, "heal");
             pushLog(`${currentSkill.name}! 체력을 ${effect.amount} 회복했습니다.`, "hit");
           } else if (effect.kind === "partyBuff") {
             setBuffUntil(Date.now() + (effect.durationMs ?? 8000));
             setBuffRatio(effect.amount);
+            pushPopup("player", "ATK UP", "buff");
             pushLog(`${currentSkill.name}! 공격력이 일시적으로 상승했습니다.`, "hit");
           } else if (effect.kind === "debuff") {
             const until = Date.now() + (effect.durationMs ?? 8000);
             debuffRef.current = { until, ratio: effect.amount };
             setDebuffUntil(until);
             setDebuffRatio(effect.amount);
+            pushPopup("monster", "WEAKEN", "buff");
             pushLog(`${currentSkill.name}! 적의 공격력을 약화시켰습니다.`, "hit");
           } else if (effect.kind === "partyHeal") {
             setPlayerHp((hp: number) => Math.min(stats.maxHp, hp + effect.amount));
+            pushPopup("player", `+${effect.amount}`, "heal");
             pushLog(`${currentSkill.name}! 체력을 ${effect.amount} 회복했습니다.`, "hit");
           } else {
             pushLog(`${currentSkill.name}! 적의 시선을 끌었다.`, "hit");
@@ -211,6 +229,8 @@ export function useCombat(
       stats.maxHp,
       triggerPlayerAnim,
       triggerMonsterAnim,
+      pushPopup,
+      triggerShake,
     ]
   );
 
@@ -233,6 +253,8 @@ export function useCombat(
     lastHitFlash,
     playerAnim,
     monsterAnim,
+    popups,
+    shake,
     handleInputChange,
     buffActive: Date.now() < buffUntil,
     debuffActive: Date.now() < debuffUntil,

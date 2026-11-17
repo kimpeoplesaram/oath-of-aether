@@ -39,6 +39,8 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
     log,
     playerAnim,
     monsterAnim,
+    popups,
+    shake,
     handleInputChange,
   } = useCoopCombat(mp, instanceId, monsterId, player, stats);
 
@@ -66,7 +68,12 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
 
   return (
     <div className="panel combat-screen">
-      <div className="battle-stage coop">
+      <div className={`battle-stage coop${shake === "small" ? " shake-small" : shake === "big" ? " shake-big" : ""}`}>
+        <div className="battle-embers" aria-hidden>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <span key={i} className="ember" />
+          ))}
+        </div>
         <div className="party-row">
           {enc.participants.map((p) => {
             const isSelf = p.id === mp.selfId;
@@ -86,6 +93,14 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
               >
                 <CharacterSprite kind={p.jobId} direction="right" scale={6} />
                 {enc.pendingAttack?.targetId === p.id && <div className="target-marker">⚠</div>}
+                {isSelf &&
+                  popups
+                    .filter((pu) => pu.side === "player")
+                    .map((pu) => (
+                      <span key={pu.id} className={`battle-popup ${pu.kind}`}>
+                        {pu.text}
+                      </span>
+                    ))}
               </div>
             );
           })}
@@ -97,6 +112,13 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
           }`}
         >
           <MonsterSprite kind={monsterId} flip scale={monster.isBoss ? 11 : 8} />
+          {popups
+            .filter((pu) => pu.side === "monster")
+            .map((pu) => (
+              <span key={pu.id} className={`battle-popup ${pu.kind}`}>
+                {pu.text}
+              </span>
+            ))}
         </div>
       </div>
       {monster.isBoss && <div className="boss-banner">⚔ 보스전: {monster.name}</div>}

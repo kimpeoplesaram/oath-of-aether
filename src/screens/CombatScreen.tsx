@@ -28,6 +28,8 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
     lastHitFlash,
     playerAnim,
     monsterAnim,
+    popups,
+    shake,
     handleInputChange,
   } = useCombat(player, monster, startHp, stats);
 
@@ -43,13 +45,25 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
 
   return (
     <div className="panel combat-screen">
-      <div className="battle-stage">
+      <div className={`battle-stage${shake === "small" ? " shake-small" : shake === "big" ? " shake-big" : ""}`}>
+        <div className="battle-embers" aria-hidden>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <span key={i} className="ember" />
+          ))}
+        </div>
         <div
           className={`battle-side player-side${lastHitFlash === "player" ? " hit-flash" : ""}${
             playerAnim === "attack" ? " anim-attack-right" : playerAnim === "dodge" ? " anim-dodge" : ""
           }`}
         >
           <CharacterSprite kind={player.job.id} direction="right" scale={8} />
+          {popups
+            .filter((p) => p.side === "player")
+            .map((p) => (
+              <span key={p.id} className={`battle-popup ${p.kind}`}>
+                {p.text}
+              </span>
+            ))}
         </div>
         <div className="battle-ground" />
         <div
@@ -58,6 +72,13 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
           }`}
         >
           <MonsterSprite kind={monster.id} flip scale={monster.isBoss ? 11 : 8} />
+          {popups
+            .filter((p) => p.side === "monster")
+            .map((p) => (
+              <span key={p.id} className={`battle-popup ${p.kind}`}>
+                {p.text}
+              </span>
+            ))}
         </div>
       </div>
       {monster.isBoss && <div className="boss-banner">⚔ 보스전: {monster.name}</div>}
