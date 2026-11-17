@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { JOBS } from "../data/jobs";
-import { ApiError, login, register, wsUrlToHttp } from "../multiplayer/accountApi";
+import { ApiError, login, register, wsUrlToHttp, normalizeServerUrl } from "../multiplayer/accountApi";
 import type { AccountPayload } from "../multiplayer/accountApi";
 import type { AccountSession, JobId } from "../types";
 
@@ -11,9 +11,17 @@ interface Props {
 
 type Tab = "login" | "register";
 
+// 배포된 공식 서버 주소. 로컬(localhost)에서 개발 중일 때는 로컬 서버를 기본값으로 쓴다.
+const PRODUCTION_SERVER_URL = "wss://oath-of-aether.onrender.com";
+const LOCAL_SERVER_URL = "ws://localhost:8787";
+const DEFAULT_SERVER_URL =
+  typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? LOCAL_SERVER_URL
+    : PRODUCTION_SERVER_URL;
+
 export function LoginScreen({ onLoggedIn, onBack }: Props) {
   const [tab, setTab] = useState<Tab>("login");
-  const [serverUrl, setServerUrl] = useState("ws://localhost:8787");
+  const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER_URL);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -28,9 +36,10 @@ export function LoginScreen({ onLoggedIn, onBack }: Props) {
     setError(null);
     setBusy(true);
     try {
-      const apiBaseUrl = wsUrlToHttp(serverUrl.trim());
+      const normalized = normalizeServerUrl(serverUrl);
+      const apiBaseUrl = wsUrlToHttp(normalized);
       const { token, account } = await login(apiBaseUrl, { username: username.trim(), password });
-      onLoggedIn({ username: account.username, token, apiBaseUrl, guildId: account.guildId }, account, serverUrl.trim());
+      onLoggedIn({ username: account.username, token, apiBaseUrl, guildId: account.guildId }, account, normalized);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "로그인에 실패했습니다.");
     } finally {
@@ -42,14 +51,15 @@ export function LoginScreen({ onLoggedIn, onBack }: Props) {
     setError(null);
     setBusy(true);
     try {
-      const apiBaseUrl = wsUrlToHttp(serverUrl.trim());
+      const normalized = normalizeServerUrl(serverUrl);
+      const apiBaseUrl = wsUrlToHttp(normalized);
       const { token, account } = await register(apiBaseUrl, {
         username: username.trim(),
         password,
         name: name.trim(),
         jobId,
       });
-      onLoggedIn({ username: account.username, token, apiBaseUrl, guildId: account.guildId }, account, serverUrl.trim());
+      onLoggedIn({ username: account.username, token, apiBaseUrl, guildId: account.guildId }, account, normalized);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "회원가입에 실패했습니다.");
     } finally {
@@ -66,7 +76,7 @@ export function LoginScreen({ onLoggedIn, onBack }: Props) {
 
       <input
         className="name-input"
-        placeholder="서버 주소 (예: ws://localhost:8787)"
+        placeholder="서버 주소 (예: wss://oath-of-aether.onrender.com)"
         value={serverUrl}
         onChange={(e: any) => setServerUrl(e.target.value)}
       />

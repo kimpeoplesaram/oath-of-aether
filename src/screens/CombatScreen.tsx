@@ -115,7 +115,8 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
             ref={inputRef}
             className="typing-input"
             value={typed}
-            onChange={(e: any) => handleInputChange(e.target.value)}
+            onChange={(e: any) => handleInputChange(e.target.value, e.nativeEvent?.isComposing)}
+            onCompositionEnd={(e: any) => handleInputChange(e.target.value, false)}
             autoFocus
             spellCheck={false}
             autoComplete="off"

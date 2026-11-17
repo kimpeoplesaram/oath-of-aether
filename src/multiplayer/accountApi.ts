@@ -55,6 +55,27 @@ export function wsUrlToHttp(serverUrl: string): string {
   return serverUrl.replace(/^ws:\/\//, "http://").replace(/^wss:\/\//, "https://").replace(/\/+$/, "");
 }
 
+// 페이지가 HTTPS로 서빙되는 경우(예: Netlify 배포) 브라우저는 평문 ws://, http:// 요청을
+// "mixed content"로 조용히 차단한다. 사용자가 주소를 ws://로 입력해도 안전하게 동작하도록
+// 접속 환경에 맞는 스킴으로 자동 보정한다.
+export function normalizeServerUrl(rawInput: string): string {
+  let url = rawInput.trim().replace(/\/+$/, "");
+  if (!url) return url;
+
+  const pageIsSecure = typeof window !== "undefined" && window.location.protocol === "https:";
+
+  if (!/^wss?:\/\//.test(url) && !/^https?:\/\//.test(url)) {
+    // 스킴이 없으면 현재 페이지 보안 수준에 맞춰 기본값을 붙인다.
+    url = (pageIsSecure ? "wss://" : "ws://") + url;
+  }
+
+  if (pageIsSecure) {
+    url = url.replace(/^ws:\/\//, "wss://").replace(/^http:\/\//, "https://");
+  }
+
+  return url;
+}
+
 async function request<T>(apiBaseUrl: string, path: string, body: unknown): Promise<T> {
   let res: Response;
   try {

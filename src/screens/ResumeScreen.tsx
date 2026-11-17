@@ -4,6 +4,7 @@ import { getEquipment } from "../data/equipment";
 import { computeStats } from "../combat/growth";
 import type { MultiplayerJoinInput } from "./CharacterCreateScreen";
 import type { AccountPayload } from "../multiplayer/accountApi";
+import { normalizeServerUrl } from "../multiplayer/accountApi";
 import type { AccountSession, PlayerCharacter } from "../types";
 import { GuildPanel } from "./GuildPanel";
 
@@ -57,7 +58,9 @@ export function ResumeScreen({ account, session, defaultServerUrl, onStart, onLo
 
   function handleStart() {
     const multiplayer =
-      coopEnabled && serverUrl.trim() ? { serverUrl: serverUrl.trim(), room: room.trim().toUpperCase() } : null;
+      coopEnabled && serverUrl.trim()
+        ? { serverUrl: normalizeServerUrl(serverUrl), room: room.trim().toUpperCase() }
+        : null;
     onStart(character, multiplayer);
   }
 

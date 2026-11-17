@@ -158,7 +158,8 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
           ref={inputRef}
           className="typing-input"
           value={typed}
-          onChange={(e: any) => handleInputChange(e.target.value)}
+          onChange={(e: any) => handleInputChange(e.target.value, e.nativeEvent?.isComposing)}
+          onCompositionEnd={(e: any) => handleInputChange(e.target.value, false)}
           autoFocus
           spellCheck={false}
           autoComplete="off"

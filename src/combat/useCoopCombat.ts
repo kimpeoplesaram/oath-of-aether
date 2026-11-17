@@ -56,9 +56,12 @@ export function useCoopCombat(
   const activeTarget = isTargeted && enc?.pendingAttack ? enc.pendingAttack.dodgePhrase : currentSkill.inputPhrase;
 
   const handleInputChange = useCallback(
-    (value: string) => {
+    (value: string, isComposing?: boolean) => {
       const bounded = value.slice(0, activeTarget.length);
       setTyped(bounded);
+
+      // 한글 조합 중에는 완성되지 않은 글자이므로 오타/완성 판정을 미룬다.
+      if (isComposing) return;
 
       if (hasTypo(activeTarget, bounded)) {
         setTyped("");

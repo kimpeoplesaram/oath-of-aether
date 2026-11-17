@@ -110,11 +110,17 @@ export function useCombat(
   const activeTarget = incoming ? incoming.attack.dodgePhrase : currentSkill.inputPhrase;
 
   const handleInputChange = useCallback(
-    (value: string) => {
+    (value: string, isComposing?: boolean) => {
       if (resultRef.current !== "ongoing") return;
       // 목표 문구보다 길게 입력할 수 없도록 제한
       const bounded = value.slice(0, activeTarget.length);
       setTyped(bounded);
+
+      // 한글 등 조합형 입력(IME) 중에는 아직 완성되지 않은 글자이므로
+      // 오타/완성 판정을 미루고 화면 표시만 갱신한다. 그렇지 않으면
+      // 조합 중간 상태(예: "ㅇ")가 목표 글자와 달라 즉시 오타로 처리되어
+      // 입력이 계속 초기화되는 것처럼 보인다.
+      if (isComposing) return;
 
       if (hasTypo(activeTarget, bounded)) {
         // 오타 발생: 입력을 즉시 리셋해 다시 처음부터 입력하게 한다
