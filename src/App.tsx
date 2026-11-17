@@ -199,7 +199,7 @@ export function App() {
     : null;
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${screen === "login" ? " app-shell-wide" : ""}`}>
       {screen === "title" && (
         <TitleScreen
           onStart={() => setScreen("create")}

@@ -730,8 +730,79 @@ button {
 }
 
 /* ---------- Login / Resume / Guild ---------- */
-.login-screen { max-width: 480px; }
+.app-shell-wide { width: min(1180px, 96vw); }
+
+.login-hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 32px;
+  align-items: center;
+  min-height: 72vh;
+}
+
+.login-hero-side { padding: 20px 10px; }
+
+.login-hero-title {
+  font-size: clamp(2.4rem, 5vw, 3.4rem);
+  color: var(--accent-gold);
+  text-shadow: 0 0 28px rgba(212, 175, 106, 0.35);
+  margin-bottom: 6px;
+}
+
+.login-hero-tagline {
+  color: var(--accent-ether);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  margin: 0 0 18px;
+}
+
+.login-hero-desc {
+  color: var(--text-dim);
+  line-height: 1.7;
+  max-width: 440px;
+  margin-bottom: 22px;
+}
+
+.login-hero-jobs { display: flex; flex-wrap: wrap; gap: 8px; }
+.login-hero-job-chip {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+
+.login-screen { max-width: 440px; width: 100%; justify-self: center; }
 .login-hint { color: var(--text-dim); font-size: 0.85rem; margin-top: 0; }
+
+.login-advanced-toggle {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.76rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 10px 0 0;
+  text-align: left;
+}
+
+.login-error-link {
+  background: none;
+  border: none;
+  color: var(--accent-ether);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.82rem;
+  padding: 0;
+}
+
+@media (max-width: 860px) {
+  .login-hero { grid-template-columns: 1fr; min-height: 0; }
+  .login-hero-side { padding: 0 4px; text-align: center; }
+  .login-hero-desc { margin-left: auto; margin-right: auto; }
+  .login-hero-jobs { justify-content: center; }
+}
 .login-tabs { display: flex; gap: 6px; margin: 14px 0; }
 .login-tab {
   flex: 1;
