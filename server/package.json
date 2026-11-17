@@ -1,0 +1,17 @@
+{
+  "name": "oath-of-aether-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "에테르의 서약 멀티플레이 서버 (오버월드 위치 동기화)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

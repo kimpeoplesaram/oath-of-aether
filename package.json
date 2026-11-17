@@ -1,0 +1,24 @@
+{
+  "name": "oath-of-aether",
+  "version": "0.1.0",
+  "private": true,
+  "description": "에테르의 서약 (The Oath of Aether) - 타자 입력 전투 판타지 액션 RPG",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "serve": "python3 -m http.server 8080 --directory dist",
+    "dev": "node scripts/build.mjs --watch & python3 -m http.server 8080 --directory dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "typescript": "^6.0.3",
+    "@types/react": "^19.2.8",
+    "@types/react-dom": "^19.2.8"
+  }
+}

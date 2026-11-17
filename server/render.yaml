@@ -1,0 +1,18 @@
+# Render.com 배포용 설정.
+# Render 대시보드에서 "New Web Service" → 이 저장소 선택 → Root Directory를
+# `server` 로 지정하면 이 파일을 자동으로 인식합니다. (Railway는 UI에서
+# Root Directory만 `server`로 지정하면 별도 설정 파일 없이도 동작합니다.)
+services:
+  - type: web
+    name: oath-of-aether-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+# 참고: 무료 플랜은 파일 시스템이 일시적(ephemeral)이라 server/data.json에 저장되는
+# 계정/길드 정보가 재배포/재시작 때마다 초기화됩니다. 영구 보존이 필요하면 Render의
+# 유료 Persistent Disk를 추가하고 data.json 경로를 그 디스크로 지정하세요.
