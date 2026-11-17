@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CharacterSprite, MonsterSprite } from "../render/SpriteCanvas";
 import type { Direction } from "../render/sprites";
 import {
@@ -103,7 +103,9 @@ export function OverworldScreen({
     return init;
   });
   const [target, setTarget] = useState<Interactable | null>(null);
+  const [viewportSize, setViewportSize] = useState({ width: 960, height: 540 });
 
+  const viewportRef = useRef<HTMLDivElement | null>(null);
   const pressedKeys = useRef<Set<string>>(new Set());
   const encounterLockRef = useRef(false);
   const targetRef = useRef<Interactable | null>(null);
@@ -115,6 +117,18 @@ export function OverworldScreen({
     sendMove(pos.x, pos.y, direction, moving, player.hp, stats.maxHp, player.level);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pos.x, pos.y, direction, moving, player.hp, stats.maxHp, player.level]);
+
+  // 별도 스크롤 영역을 두지 않고, 창(뷰포트) 자체가 카메라 역할을 하도록 실제 픽셀
+  // 크기를 측정한다. 창 크기가 바뀌면(리사이즈) 즉시 다시 측정한다.
+  useLayoutEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const update = () => setViewportSize({ width: el.clientWidth, height: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // 항상 최신 props/state를 참조하도록 ref에 보관해, 키 이벤트 리스너는 한 번만 등록한다.
   const tryInteractRef = useRef<() => void>(() => {});
@@ -255,9 +269,20 @@ export function OverworldScreen({
     });
   }, [pos, monsterWander, clearedInstanceIds]);
 
+  // 플레이어가 뷰포트(창) 중앙에 오도록 카메라 오프셋을 계산하고, 맵 바깥이 보이지
+  // 않도록 0 ~ (맵 크기 - 뷰포트 크기) 범위로 고정(clamp)한다.
+  const camX = Math.max(
+    0,
+    Math.min(MAP_WIDTH - viewportSize.width, pos.x + PLAYER_SIZE / 2 - viewportSize.width / 2),
+  );
+  const camY = Math.max(
+    0,
+    Math.min(MAP_HEIGHT - viewportSize.height, pos.y + PLAYER_SIZE / 2 - viewportSize.height / 2),
+  );
+
   return (
-    <div className="panel overworld-screen">
-      <div className="overworld-hud">
+    <div className="overworld-screen">
+      <div className="overworld-topbar">
         <div className="hud-left">
           <span className="hud-name">
             {player.job.icon} {player.name}
@@ -286,39 +311,72 @@ export function OverworldScreen({
         </button>
       </div>
 
-      {questStatus && (
-        <div className={`quest-banner${questStatus.done ? " done" : ""}`}>
-          <strong>{questStatus.done ? "모든 퀘스트 완료!" : `퀘스트: ${questStatus.title}`}</strong>
-          {!questStatus.done && (
-            <>
-              <span className="quest-desc">{questStatus.description}</span>
-              <span className="quest-progress">
-                {questStatus.progress}/{questStatus.target}
-              </span>
-            </>
-          )}
+      <div className="overworld-viewport" ref={viewportRef}>
+        <div
+          className="overworld-world"
+          style={{
+            width: MAP_WIDTH,
+            height: MAP_HEIGHT,
+            transform: `translate(${-camX}px, ${-camY}px)`,
+          }}
+        >
+          <div className="grass-field" />
+          {TREE_DECORATIONS.map((t, i) => (
+            <div
+              key={i}
+              className="tree-deco"
+              style={{ left: t.x, top: t.y, width: t.size, height: t.size }}
+            />
+          ))}
+
+          {DUNGEON_PORTALS.map((portal) => {
+            const isTarget = target?.kind === "portal" && target.instanceId === portal.instanceId;
+            return (
+              <div
+                key={portal.instanceId}
+                className={`dungeon-portal${questsComplete ? " unlocked" : " locked"}${isTarget ? " targetable" : ""}`}
+                style={{
+                  left: portal.x,
+                  top: portal.y,
+                  width: portal.size,
+                  height: portal.size,
+                }}
+                title={questsComplete ? `던전 입구: ${portal.name}` : "모든 퀘스트를 완료해야 열립니다"}
+              >
+                <span className="dungeon-portal-icon">{questsComplete ? "🌀" : "🔒"}</span>
+                {isTarget && (
+                  <div className="interact-prompt">{questsComplete ? "E 입장" : "🔒 잠김"}</div>
+                )}
+              </div>
+            );
+          })}
+
+          {MONSTER_SPAWNS.filter((s) => !clearedInstanceIds.includes(s.instanceId)).map((spawn) => {
+            const w = monsterWander[spawn.instanceId];
+            const isTarget = target?.kind === "monster" && target.instanceId === spawn.instanceId;
+            return (
+              <div
+                key={spawn.instanceId}
+                className={`overworld-entity wander-entity${isTarget ? " targetable" : ""}`}
+                style={{ left: w?.x ?? spawn.x, top: w?.y ?? spawn.y }}
+              >
+                <MonsterSprite kind={spawn.monsterId} scale={3.8} />
+                {isTarget && <div className="interact-prompt">E 전투</div>}
+              </div>
+            );
+          })}
+
+          {remotePlayers.map((rp) => (
+            <div key={rp.id} className="overworld-entity remote-entity" style={{ left: rp.x, top: rp.y }}>
+              <span className="remote-name-tag">{rp.name}</span>
+              <CharacterSprite kind={rp.jobId} direction={rp.dir} moving={rp.moving} scale={3.8} />
+            </div>
+          ))}
+
+          <div className="overworld-entity player-entity" style={{ left: pos.x, top: pos.y }}>
+            <CharacterSprite kind={player.job.id} direction={direction} moving={moving} scale={3.8} />
+          </div>
         </div>
-      )}
-
-      {multiplayerActive && mpStatus === "error" && mpErrorMessage && (
-        <div className="overworld-hint" style={{ color: "var(--danger)" }}>
-          {mpErrorMessage} (방 코드/서버 주소를 확인하세요)
-        </div>
-      )}
-
-      {multiplayerActive && mpStatus === "connected" && (
-        <PartyPanel mp={mp} selfPlayer={player} selfStats={stats} remotePlayers={remotePlayers} />
-      )}
-
-      <div className="overworld-viewport" style={{ width: MAP_WIDTH, height: MAP_HEIGHT }}>
-        <div className="grass-field" />
-        {TREE_DECORATIONS.map((t, i) => (
-          <div
-            key={i}
-            className="tree-deco"
-            style={{ left: t.x, top: t.y, width: t.size, height: t.size }}
-          />
-        ))}
 
         <div className="minimap">
           <div className="minimap-label">지도</div>
@@ -355,58 +413,34 @@ export function OverworldScreen({
           />
         </div>
 
-        {DUNGEON_PORTALS.map((portal) => {
-          const isTarget = target?.kind === "portal" && target.instanceId === portal.instanceId;
-          return (
-            <div
-              key={portal.instanceId}
-              className={`dungeon-portal${questsComplete ? " unlocked" : " locked"}${isTarget ? " targetable" : ""}`}
-              style={{
-                left: portal.x,
-                top: portal.y,
-                width: portal.size,
-                height: portal.size,
-              }}
-              title={questsComplete ? `던전 입구: ${portal.name}` : "모든 퀘스트를 완료해야 열립니다"}
-            >
-              <span className="dungeon-portal-icon">{questsComplete ? "🌀" : "🔒"}</span>
-              {isTarget && (
-                <div className="interact-prompt">{questsComplete ? "E 입장" : "🔒 잠김"}</div>
-              )}
-            </div>
-          );
-        })}
-
-        {MONSTER_SPAWNS.filter((s) => !clearedInstanceIds.includes(s.instanceId)).map((spawn) => {
-          const w = monsterWander[spawn.instanceId];
-          const isTarget = target?.kind === "monster" && target.instanceId === spawn.instanceId;
-          return (
-            <div
-              key={spawn.instanceId}
-              className={`overworld-entity wander-entity${isTarget ? " targetable" : ""}`}
-              style={{ left: w?.x ?? spawn.x, top: w?.y ?? spawn.y }}
-            >
-              <MonsterSprite kind={spawn.monsterId} scale={3.8} />
-              {isTarget && <div className="interact-prompt">E 전투</div>}
-            </div>
-          );
-        })}
-
-        {remotePlayers.map((rp) => (
-          <div key={rp.id} className="overworld-entity remote-entity" style={{ left: rp.x, top: rp.y }}>
-            <span className="remote-name-tag">{rp.name}</span>
-            <CharacterSprite kind={rp.jobId} direction={rp.dir} moving={rp.moving} scale={3.8} />
+        {questStatus && (
+          <div className={`quest-banner overlay-banner${questStatus.done ? " done" : ""}`}>
+            <strong>{questStatus.done ? "모든 퀘스트 완료!" : `퀘스트: ${questStatus.title}`}</strong>
+            {!questStatus.done && (
+              <>
+                <span className="quest-desc">{questStatus.description}</span>
+                <span className="quest-progress">
+                  {questStatus.progress}/{questStatus.target}
+                </span>
+              </>
+            )}
           </div>
-        ))}
+        )}
 
-        <div className="overworld-entity player-entity" style={{ left: pos.x, top: pos.y }}>
-          <CharacterSprite kind={player.job.id} direction={direction} moving={moving} scale={3.8} />
+        {multiplayerActive && mpStatus === "error" && mpErrorMessage && (
+          <div className="overworld-hint overlay-hint" style={{ color: "var(--danger)" }}>
+            {mpErrorMessage} (방 코드/서버 주소를 확인하세요)
+          </div>
+        )}
+
+        {multiplayerActive && mpStatus === "connected" && (
+          <PartyPanel mp={mp} selfPlayer={player} selfStats={stats} remotePlayers={remotePlayers} />
+        )}
+
+        <div className="overworld-hint overlay-hint bottom-hint">
+          방향키 또는 WASD로 이동 · 몬스터나 던전 입구에 가까이 가서 E키를 누르면 전투가 시작됩니다 · 쓰러뜨린 몬스터는 잠시 후 다시 나타납니다 · 보스는 모든 퀘스트를 완료해야 도전할 수 있습니다
+          {multiplayerActive && " · 보스전은 같은 방에 있는 친구와 함께 싸웁니다"}
         </div>
-      </div>
-
-      <div className="overworld-hint">
-        방향키 또는 WASD로 이동 · 몬스터나 던전 입구에 가까이 가서 E키를 누르면 전투가 시작됩니다 · 쓰러뜨린 몬스터는 잠시 후 다시 나타납니다 · 보스는 모든 퀘스트를 완료해야 도전할 수 있습니다
-        {multiplayerActive && " · 보스전은 같은 방에 있는 친구와 함께 싸웁니다"}
       </div>
     </div>
   );

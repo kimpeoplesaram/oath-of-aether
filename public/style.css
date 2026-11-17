@@ -438,13 +438,29 @@ button {
 }
 
 /* ---------- Overworld ---------- */
-.overworld-screen { padding: 20px; position: relative; }
+/* 별도의 스크롤 패널이 아니라, 창(브라우저 뷰포트) 자체를 가득 채우는 게임 화면.
+   맵은 뷰포트보다 훨씬 크고, 플레이어를 따라 카메라(.overworld-world의 transform)가
+   움직이는 방식이라 마우스 스크롤이 필요 없다. */
+.overworld-screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #0a0b14;
+  z-index: 1;
+}
 
-.overworld-hud {
+.overworld-topbar {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 12px;
+  padding: 10px 18px;
+  background: rgba(14, 15, 24, 0.95);
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+  z-index: 10;
 }
 
 .hud-left { display: flex; align-items: baseline; gap: 8px; min-width: 150px; }
@@ -464,21 +480,37 @@ button {
   border: 1px solid var(--accent-gold);
   border-radius: 8px;
   padding: 8px 14px;
-  margin-bottom: 10px;
   font-size: 0.82rem;
 }
 .quest-banner.done { border-color: var(--ok); color: var(--ok); }
 .quest-desc { color: var(--text-dim); }
 .quest-progress { margin-left: auto; color: var(--accent-gold); font-weight: 700; }
 
+/* 퀘스트 배너/힌트는 더 이상 문서 흐름 안에 있지 않고, 카메라 뷰 위에 떠 있는
+   오버레이다(= .overworld-world 안에 있지 않으므로 카메라를 따라 움직이지 않는다). */
+.overlay-banner {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  max-width: min(420px, 60vw);
+  z-index: 6;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+}
+
 .overworld-viewport {
   position: relative;
-  margin: 0 auto;
-  max-width: 100%;
-  border-radius: 10px;
+  flex: 1 1 auto;
+  width: 100%;
   overflow: hidden;
-  border: 1px solid var(--border);
-  box-shadow: inset 0 0 50px rgba(0,0,0,0.55), 0 10px 30px rgba(0,0,0,0.4);
+  background: #111;
+}
+
+/* 실제 맵 전체(뷰포트보다 훨씬 큼). transform: translate(-camX, -camY)로
+   플레이어를 뷰포트 중앙에 맞춰 이동시키는 "카메라" 레이어. */
+.overworld-world {
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .minimap {
@@ -604,15 +636,35 @@ button {
 
 .overworld-hint {
   text-align: center;
-  margin-top: 10px;
   font-size: 0.78rem;
   color: var(--text-dim);
+}
+
+.overlay-hint {
+  position: absolute;
+  z-index: 6;
+  background: rgba(10,11,20,0.78);
+  border-radius: 8px;
+  padding: 6px 12px;
+}
+
+.overlay-hint.bottom-hint {
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(900px, 92vw);
+}
+
+.overlay-hint:not(.bottom-hint) {
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .party-panel {
   animation: fadeIn 0.25s ease-out;
   position: absolute;
-  top: 20px;
+  top: 132px;
   right: 20px;
   width: 230px;
   background: rgba(18,18,26,0.92);

@@ -9,6 +9,7 @@
 declare module "react" {
   export function useState<T>(initial: T | (() => T)): [T, (value: T | ((prev: T) => T)) => void];
   export function useEffect(effect: () => void | (() => void), deps?: any[]): void;
+  export function useLayoutEffect(effect: () => void | (() => void), deps?: any[]): void;
   export function useCallback<T extends (...args: any[]) => any>(fn: T, deps: any[]): T;
   export function useRef<T>(initial: T): { current: T };
   export function createElement(...args: any[]): any;
