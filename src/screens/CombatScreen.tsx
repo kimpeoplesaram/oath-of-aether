@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useCombat, type CombatResult } from "../combat/useCombat";
 import { diffPhrase } from "../combat/engine";
 import { CharacterSprite, MonsterSprite } from "../render/SpriteCanvas";
+import { HitBurst } from "./HitBurst";
 import type { MonsterDefinition, PlayerCharacter, PlayerStats } from "../types";
 
 interface Props {
@@ -29,7 +30,9 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
     playerAnim,
     monsterAnim,
     popups,
+    bursts,
     shake,
+    critFlash,
     handleInputChange,
   } = useCombat(player, monster, startHp, stats);
 
@@ -56,13 +59,18 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
             playerAnim === "attack" ? " anim-attack-right" : playerAnim === "dodge" ? " anim-dodge" : ""
           }`}
         >
-          <CharacterSprite kind={player.job.id} direction="right" scale={8} />
+          <CharacterSprite kind={player.job.id} direction="right" scale={9.5} />
           {popups
             .filter((p) => p.side === "player")
             .map((p) => (
               <span key={p.id} className={`battle-popup ${p.kind}`}>
                 {p.text}
               </span>
+            ))}
+          {bursts
+            .filter((b) => b.side === "player")
+            .map((b) => (
+              <HitBurst key={b.id} kind={b.kind} />
             ))}
         </div>
         <div className="battle-ground" />
@@ -71,7 +79,7 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
             monsterAnim === "attack" ? " anim-attack-left" : monsterAnim === "dodge" ? " anim-dodge" : ""
           }`}
         >
-          <MonsterSprite kind={monster.id} flip scale={monster.isBoss ? 11 : 8} />
+          <MonsterSprite kind={monster.id} flip scale={monster.isBoss ? 13 : 9.5} />
           {popups
             .filter((p) => p.side === "monster")
             .map((p) => (
@@ -79,8 +87,14 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
                 {p.text}
               </span>
             ))}
+          {bursts
+            .filter((b) => b.side === "monster")
+            .map((b) => (
+              <HitBurst key={b.id} kind={b.kind} />
+            ))}
         </div>
       </div>
+      {critFlash && <div className="combat-flash" />}
       {monster.isBoss && <div className="boss-banner">⚔ 보스전: {monster.name}</div>}
 
       <div className="combatants">

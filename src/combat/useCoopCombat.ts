@@ -26,7 +26,7 @@ export function useCoopCombat(
   const joinedRef = useRef(false);
   const animTimeouts = useRef<{ player?: ReturnType<typeof setTimeout>; monster?: ReturnType<typeof setTimeout> }>({});
   const prevPendingRef = useRef<string | null>(null);
-  const { popups, shake, pushPopup, triggerShake } = useBattleEffects();
+  const { popups, bursts, shake, flash: critFlash, pushPopup, triggerBurst, triggerShake, triggerFlash } = useBattleEffects();
 
   const triggerPlayerAnim = useCallback((kind: "attack" | "dodge", ms = 300) => {
     if (animTimeouts.current.player) clearTimeout(animTimeouts.current.player);
@@ -85,10 +85,11 @@ export function useCoopCombat(
     const prev = prevSelfHpRef.current;
     if (prev != null && self.hp < prev) {
       pushPopup("player", `-${prev - self.hp}`, "damage");
+      triggerBurst("player", "hit");
       triggerShake("small");
     }
     prevSelfHpRef.current = self.hp;
-  }, [self?.hp, pushPopup, triggerShake]);
+  }, [self?.hp, pushPopup, triggerBurst, triggerShake]);
   const isTargeted = !!(enc?.pendingAttack && enc.pendingAttack.targetId === mp.selfId);
   const buffActive = !!enc && Date.now() < enc.partyBuffUntil;
   const debuffActive = !!enc && Date.now() < (enc.monsterDebuffUntil ?? 0);
@@ -138,7 +139,9 @@ export function useCoopCombat(
               const { amount: total, crit } = rollCrit(buffed);
               mp.sendEncounterAction(instanceId, "damage", total);
               pushPopup("monster", `-${total}`, crit ? "crit" : "damage");
+              triggerBurst("monster", crit ? "crit" : "hit");
               triggerShake(crit ? "big" : "small");
+              if (crit) triggerFlash();
               pushLog(
                 crit
                   ? `치명타! ${currentSkill.name}로 ${total}의 피해를 입혔습니다!`
@@ -184,7 +187,9 @@ export function useCoopCombat(
       triggerPlayerAnim,
       triggerMonsterAnim,
       pushPopup,
+      triggerBurst,
       triggerShake,
+      triggerFlash,
     ]
   );
 
@@ -202,7 +207,9 @@ export function useCoopCombat(
     playerAnim,
     monsterAnim,
     popups,
+    bursts,
     shake,
+    critFlash,
     currentSkill,
     typed,
     activeTarget,

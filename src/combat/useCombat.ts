@@ -46,7 +46,16 @@ export function useCombat(
   const [debuffUntil, setDebuffUntil] = useState(0);
   const [debuffRatio, setDebuffRatio] = useState(0);
   const debuffRef = useRef({ until: 0, ratio: 0 });
-  const { popups, shake, pushPopup, triggerShake } = useBattleEffects();
+  const {
+    popups,
+    bursts,
+    shake,
+    flash: critFlash,
+    pushPopup,
+    triggerBurst,
+    triggerShake,
+    triggerFlash,
+  } = useBattleEffects();
 
   const resultRef = useRef(result);
   resultRef.current = result;
@@ -112,7 +121,9 @@ export function useCombat(
         flash("player");
         triggerMonsterAnim("attack");
         pushPopup("player", `-${dmg}`, "damage");
+        triggerBurst("player", "hit");
         triggerShake(monsterDef.isBoss ? "big" : "small");
+        if (monsterDef.isBoss) triggerFlash();
         pushLog(`회피 실패! ${dmg}의 피해를 입었습니다.`, "miss");
         setIncoming(null);
         incomingRef.current = null;
@@ -121,7 +132,7 @@ export function useCombat(
       }
     }, 50);
     return () => clearInterval(id);
-  }, [result, monsterDef, pushLog, flash, triggerMonsterAnim, pushPopup, triggerShake]);
+  }, [result, monsterDef, pushLog, flash, triggerMonsterAnim, pushPopup, triggerBurst, triggerShake, triggerFlash]);
 
   // 승패 판정
   useEffect(() => {
@@ -180,7 +191,9 @@ export function useCombat(
               setMonsterHp((hp: number) => Math.max(0, hp - totalDamage));
               flash("monster");
               pushPopup("monster", `-${totalDamage}`, crit ? "crit" : "damage");
+              triggerBurst("monster", crit ? "crit" : "hit");
               triggerShake(crit ? "big" : "small");
+              if (crit) triggerFlash();
               pushLog(
                 crit
                   ? `치명타! ${currentSkill.name}로 ${totalDamage}의 피해를 입혔습니다!`
@@ -230,7 +243,9 @@ export function useCombat(
       triggerPlayerAnim,
       triggerMonsterAnim,
       pushPopup,
+      triggerBurst,
       triggerShake,
+      triggerFlash,
     ]
   );
 
@@ -254,7 +269,9 @@ export function useCombat(
     playerAnim,
     monsterAnim,
     popups,
+    bursts,
     shake,
+    critFlash,
     handleInputChange,
     buffActive: Date.now() < buffUntil,
     debuffActive: Date.now() < debuffUntil,

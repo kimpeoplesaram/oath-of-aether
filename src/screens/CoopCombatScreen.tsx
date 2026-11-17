@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useCoopCombat } from "../combat/useCoopCombat";
 import { diffPhrase } from "../combat/engine";
 import { CharacterSprite, MonsterSprite } from "../render/SpriteCanvas";
+import { HitBurst } from "./HitBurst";
 import { getMonster } from "../data/monsters";
 import type { MultiplayerApi } from "../multiplayer/useMultiplayer";
 import type { MonsterId, PlayerCharacter, PlayerStats } from "../types";
@@ -40,7 +41,9 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
     playerAnim,
     monsterAnim,
     popups,
+    bursts,
     shake,
+    critFlash,
     handleInputChange,
   } = useCoopCombat(mp, instanceId, monsterId, player, stats);
 
@@ -91,7 +94,7 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
                   enc.pendingAttack?.targetId === p.id ? " targeted" : ""
                 }${selfAnimClass}`}
               >
-                <CharacterSprite kind={p.jobId} direction="right" scale={6} />
+                <CharacterSprite kind={p.jobId} direction="right" scale={7} />
                 {enc.pendingAttack?.targetId === p.id && <div className="target-marker">⚠</div>}
                 {isSelf &&
                   popups
@@ -101,6 +104,10 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
                         {pu.text}
                       </span>
                     ))}
+                {isSelf &&
+                  bursts
+                    .filter((b) => b.side === "player")
+                    .map((b) => <HitBurst key={b.id} kind={b.kind} />)}
               </div>
             );
           })}
@@ -111,7 +118,7 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
             monsterAnim === "attack" ? " anim-attack-left" : monsterAnim === "dodge" ? " anim-dodge" : ""
           }`}
         >
-          <MonsterSprite kind={monsterId} flip scale={monster.isBoss ? 11 : 8} />
+          <MonsterSprite kind={monsterId} flip scale={monster.isBoss ? 13 : 9.5} />
           {popups
             .filter((pu) => pu.side === "monster")
             .map((pu) => (
@@ -119,8 +126,14 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
                 {pu.text}
               </span>
             ))}
+          {bursts
+            .filter((b) => b.side === "monster")
+            .map((b) => (
+              <HitBurst key={b.id} kind={b.kind} />
+            ))}
         </div>
       </div>
+      {critFlash && <div className="combat-flash" />}
       {monster.isBoss && <div className="boss-banner">⚔ 보스전: {monster.name}</div>}
 
       <div className="party-hp-row">

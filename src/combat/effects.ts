@@ -13,12 +13,24 @@ export interface BattlePopup {
   kind: PopupKind;
 }
 
+export type BurstKind = "hit" | "crit" | "heal";
+
+export interface BattleBurst {
+  id: number;
+  side: "player" | "monster";
+  kind: BurstKind;
+}
+
 let popupSeq = 0;
+let burstSeq = 0;
 
 export function useBattleEffects() {
   const [popups, setPopups] = useState<BattlePopup[]>([]);
+  const [bursts, setBursts] = useState<BattleBurst[]>([]);
   const [shake, setShake] = useState<"none" | "small" | "big">("none");
+  const [flash, setFlash] = useState(false);
   const shakeTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const flashTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const pushPopup = useCallback((side: "player" | "monster", text: string, kind: PopupKind) => {
     popupSeq += 1;
@@ -29,13 +41,29 @@ export function useBattleEffects() {
     }, 850);
   }, []);
 
+  const triggerBurst = useCallback((side: "player" | "monster", kind: BurstKind) => {
+    burstSeq += 1;
+    const id = burstSeq;
+    setBursts((prev) => [...prev.slice(-7), { id, side, kind }]);
+    setTimeout(() => {
+      setBursts((prev) => prev.filter((b) => b.id !== id));
+    }, 500);
+  }, []);
+
   const triggerShake = useCallback((level: "small" | "big" = "small", ms = 260) => {
     if (shakeTimeout.current) clearTimeout(shakeTimeout.current);
     setShake(level);
     shakeTimeout.current = setTimeout(() => setShake("none"), ms);
   }, []);
 
-  return { popups, shake, pushPopup, triggerShake };
+  // 치명타처럼 아주 강한 타격일 때 화면 전체가 짧게 번쩍이는 플래시 연출.
+  const triggerFlash = useCallback((ms = 140) => {
+    if (flashTimeout.current) clearTimeout(flashTimeout.current);
+    setFlash(true);
+    flashTimeout.current = setTimeout(() => setFlash(false), ms);
+  }, []);
+
+  return { popups, bursts, shake, flash, pushPopup, triggerBurst, triggerShake, triggerFlash };
 }
 
 // 치명타 판정: 20% 확률로 1.6배 피해. 공격을 가하는 쪽(플레이어/파티원)에만 적용해
