@@ -38,6 +38,8 @@ export function useCombat(
   const [log, setLog] = useState<LogEntry[]>([]);
   const [result, setResult] = useState<CombatResult>("ongoing");
   const [lastHitFlash, setLastHitFlash] = useState<"player" | "monster" | null>(null);
+  const [playerAnim, setPlayerAnim] = useState<"idle" | "attack" | "dodge">("idle");
+  const [monsterAnim, setMonsterAnim] = useState<"idle" | "attack" | "dodge">("idle");
   const [buffUntil, setBuffUntil] = useState(0);
   const [buffRatio, setBuffRatio] = useState(0);
   const [debuffUntil, setDebuffUntil] = useState(0);
@@ -63,6 +65,27 @@ export function useCombat(
     setTimeout(() => setLastHitFlash((cur) => (cur === who ? null : cur)), 180);
   }, []);
 
+  const animTimeouts = useRef<{ player?: ReturnType<typeof setTimeout>; monster?: ReturnType<typeof setTimeout> }>({});
+
+  const triggerPlayerAnim = useCallback((kind: "attack" | "dodge", ms = 300) => {
+    if (animTimeouts.current.player) clearTimeout(animTimeouts.current.player);
+    setPlayerAnim(kind);
+    animTimeouts.current.player = setTimeout(() => setPlayerAnim("idle"), ms);
+  }, []);
+
+  const triggerMonsterAnim = useCallback((kind: "attack" | "dodge", ms = 300) => {
+    if (animTimeouts.current.monster) clearTimeout(animTimeouts.current.monster);
+    setMonsterAnim(kind);
+    animTimeouts.current.monster = setTimeout(() => setMonsterAnim("idle"), ms);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (animTimeouts.current.player) clearTimeout(animTimeouts.current.player);
+      if (animTimeouts.current.monster) clearTimeout(animTimeouts.current.monster);
+    };
+  }, []);
+
   // 전투 틱: 몬스터 공격 스폰, 타임아웃 판정, 타이머 UI 갱신
   useEffect(() => {
     if (result !== "ongoing") return;
@@ -85,6 +108,7 @@ export function useCombat(
         );
         setPlayerHp((hp: number) => Math.max(0, hp - dmg));
         flash("player");
+        triggerMonsterAnim("attack");
         pushLog(`회피 실패! ${dmg}의 피해를 입었습니다.`, "miss");
         setIncoming(null);
         incomingRef.current = null;
@@ -93,7 +117,7 @@ export function useCombat(
       }
     }, 50);
     return () => clearInterval(id);
-  }, [result, monsterDef, pushLog, flash]);
+  }, [result, monsterDef, pushLog, flash, triggerMonsterAnim]);
 
   // 승패 판정
   useEffect(() => {
@@ -131,17 +155,25 @@ export function useCombat(
       if (isPhraseComplete(activeTarget, bounded)) {
         if (incomingRef.current) {
           pushLog(`"${incomingRef.current.attack.dodgePhrase}" 입력 성공! 공격을 회피했습니다.`, "hit");
+          triggerPlayerAnim("dodge");
           setIncoming(null);
           incomingRef.current = null;
           nextAttackAtRef.current = Date.now() + monsterDef.attackIntervalMs;
         } else {
           const buffActive = Date.now() < buffUntil;
           const effect = resolveSkillEffect(currentSkill, atkBonus);
+          triggerPlayerAnim("attack");
           if (effect.kind === "damage") {
-            const totalDamage = Math.round(effect.amount * (buffActive ? 1 + buffRatio : 1));
-            setMonsterHp((hp: number) => Math.max(0, hp - totalDamage));
-            flash("monster");
-            pushLog(`${currentSkill.name}! ${totalDamage}의 피해를 입혔습니다.`, "hit");
+            // 몬스터도 일정 확률로 공격을 회피한다 (플레이어의 회피와 대칭되는 연출)
+            if (Math.random() < 0.15) {
+              triggerMonsterAnim("dodge");
+              pushLog(`${monsterDef.name}이(가) 공격을 회피했습니다!`, "miss");
+            } else {
+              const totalDamage = Math.round(effect.amount * (buffActive ? 1 + buffRatio : 1));
+              setMonsterHp((hp: number) => Math.max(0, hp - totalDamage));
+              flash("monster");
+              pushLog(`${currentSkill.name}! ${totalDamage}의 피해를 입혔습니다.`, "hit");
+            }
           } else if (effect.kind === "heal") {
             setPlayerHp((hp: number) => Math.min(stats.maxHp, hp + effect.amount));
             pushLog(`${currentSkill.name}! 체력을 ${effect.amount} 회복했습니다.`, "hit");
@@ -166,7 +198,20 @@ export function useCombat(
         setTyped("");
       }
     },
-    [activeTarget, currentSkill, monsterDef.attackIntervalMs, player.job, pushLog, atkBonus, flash, buffUntil, buffRatio, stats.maxHp]
+    [
+      activeTarget,
+      currentSkill,
+      monsterDef,
+      player.job,
+      pushLog,
+      atkBonus,
+      flash,
+      buffUntil,
+      buffRatio,
+      stats.maxHp,
+      triggerPlayerAnim,
+      triggerMonsterAnim,
+    ]
   );
 
   const timeRemainingRatio = incoming
@@ -186,6 +231,8 @@ export function useCombat(
     log,
     result,
     lastHitFlash,
+    playerAnim,
+    monsterAnim,
     handleInputChange,
     buffActive: Date.now() < buffUntil,
     debuffActive: Date.now() < debuffUntil,

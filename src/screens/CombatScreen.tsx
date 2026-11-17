@@ -26,6 +26,8 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
     log,
     result,
     lastHitFlash,
+    playerAnim,
+    monsterAnim,
     handleInputChange,
   } = useCombat(player, monster, startHp, stats);
 
@@ -42,11 +44,19 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
   return (
     <div className="panel combat-screen">
       <div className="battle-stage">
-        <div className={`battle-side player-side${lastHitFlash === "player" ? " hit-flash" : ""}`}>
+        <div
+          className={`battle-side player-side${lastHitFlash === "player" ? " hit-flash" : ""}${
+            playerAnim === "attack" ? " anim-attack-right" : playerAnim === "dodge" ? " anim-dodge" : ""
+          }`}
+        >
           <CharacterSprite kind={player.job.id} direction="right" scale={7} />
         </div>
         <div className="battle-ground" />
-        <div className={`battle-side monster-side${lastHitFlash === "monster" ? " hit-flash" : ""}`}>
+        <div
+          className={`battle-side monster-side${lastHitFlash === "monster" ? " hit-flash" : ""}${
+            monsterAnim === "attack" ? " anim-attack-left" : monsterAnim === "dodge" ? " anim-dodge" : ""
+          }`}
+        >
           <MonsterSprite kind={monster.id} flip scale={monster.isBoss ? 9 : 7} />
         </div>
       </div>

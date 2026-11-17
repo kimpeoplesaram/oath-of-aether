@@ -20,7 +20,30 @@ export function useCoopCombat(
   const [typed, setTyped] = useState("");
   const [log, setLog] = useState<LogEntry[]>([]);
   const [now, setNow] = useState(() => Date.now());
+  const [playerAnim, setPlayerAnim] = useState<"idle" | "attack" | "dodge">("idle");
+  const [monsterAnim, setMonsterAnim] = useState<"idle" | "attack" | "dodge">("idle");
   const joinedRef = useRef(false);
+  const animTimeouts = useRef<{ player?: ReturnType<typeof setTimeout>; monster?: ReturnType<typeof setTimeout> }>({});
+  const prevPendingRef = useRef<string | null>(null);
+
+  const triggerPlayerAnim = useCallback((kind: "attack" | "dodge", ms = 300) => {
+    if (animTimeouts.current.player) clearTimeout(animTimeouts.current.player);
+    setPlayerAnim(kind);
+    animTimeouts.current.player = setTimeout(() => setPlayerAnim("idle"), ms);
+  }, []);
+
+  const triggerMonsterAnim = useCallback((kind: "attack" | "dodge", ms = 300) => {
+    if (animTimeouts.current.monster) clearTimeout(animTimeouts.current.monster);
+    setMonsterAnim(kind);
+    animTimeouts.current.monster = setTimeout(() => setMonsterAnim("idle"), ms);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (animTimeouts.current.player) clearTimeout(animTimeouts.current.player);
+      if (animTimeouts.current.monster) clearTimeout(animTimeouts.current.monster);
+    };
+  }, []);
 
   const atkBonus = stats.atk - player.job.baseAtk;
 
@@ -55,6 +78,15 @@ export function useCoopCombat(
 
   const activeTarget = isTargeted && enc?.pendingAttack ? enc.pendingAttack.dodgePhrase : currentSkill.inputPhrase;
 
+  // 몬스터의 공격이 (누군가의 회피 성공이든 실패든) 종료되는 순간 몬스터 공격 모션을 재생한다.
+  useEffect(() => {
+    const pendingId = enc?.pendingAttack ? enc.pendingAttack.targetId + ":" + enc.pendingAttack.deadlineAt : null;
+    if (prevPendingRef.current && !pendingId) {
+      triggerMonsterAnim("attack");
+    }
+    prevPendingRef.current = pendingId;
+  }, [enc?.pendingAttack, triggerMonsterAnim]);
+
   const handleInputChange = useCallback(
     (value: string, isComposing?: boolean) => {
       const bounded = value.slice(0, activeTarget.length);
@@ -72,12 +104,20 @@ export function useCoopCombat(
         if (isTargeted) {
           mp.sendDodgeSuccess(instanceId);
           pushLog("공격을 회피했습니다!", "hit");
+          triggerPlayerAnim("dodge");
         } else {
           const effect = resolveSkillEffect(currentSkill, atkBonus);
+          triggerPlayerAnim("attack");
           if (effect.kind === "damage") {
-            const total = Math.round(effect.amount * (buffActive ? 1 + 0.3 : 1));
-            mp.sendEncounterAction(instanceId, "damage", total);
-            pushLog(`${currentSkill.name}! ${total}의 피해를 입혔습니다.`, "hit");
+            // 몬스터도 일정 확률로 공격을 회피한다 (플레이어의 회피와 대칭되는 연출)
+            if (Math.random() < 0.15) {
+              triggerMonsterAnim("dodge");
+              pushLog("몬스터가 공격을 회피했습니다!", "miss");
+            } else {
+              const total = Math.round(effect.amount * (buffActive ? 1 + 0.3 : 1));
+              mp.sendEncounterAction(instanceId, "damage", total);
+              pushLog(`${currentSkill.name}! ${total}의 피해를 입혔습니다.`, "hit");
+            }
           } else if (effect.kind === "heal") {
             mp.sendEncounterAction(instanceId, "heal", effect.amount);
             pushLog(`${currentSkill.name}! 아군을 회복시켰습니다.`, "hit");
@@ -99,7 +139,19 @@ export function useCoopCombat(
         setTyped("");
       }
     },
-    [activeTarget, isTargeted, currentSkill, atkBonus, buffActive, instanceId, mp, player.job, pushLog]
+    [
+      activeTarget,
+      isTargeted,
+      currentSkill,
+      atkBonus,
+      buffActive,
+      instanceId,
+      mp,
+      player.job,
+      pushLog,
+      triggerPlayerAnim,
+      triggerMonsterAnim,
+    ]
   );
 
   const timeRemainingRatio =
@@ -113,6 +165,8 @@ export function useCoopCombat(
     isTargeted,
     buffActive,
     debuffActive,
+    playerAnim,
+    monsterAnim,
     currentSkill,
     typed,
     activeTarget,

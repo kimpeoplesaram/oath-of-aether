@@ -37,6 +37,8 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
     activeTarget,
     timeRemainingRatio,
     log,
+    playerAnim,
+    monsterAnim,
     handleInputChange,
   } = useCoopCombat(mp, instanceId, monsterId, player, stats);
 
@@ -66,20 +68,34 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
     <div className="panel combat-screen">
       <div className="battle-stage coop">
         <div className="party-row">
-          {enc.participants.map((p) => (
-            <div
-              key={p.id}
-              className={`battle-side party-member${
-                enc.pendingAttack?.targetId === p.id ? " targeted" : ""
-              }`}
-            >
-              <CharacterSprite kind={p.jobId} direction="right" scale={5} />
-              {enc.pendingAttack?.targetId === p.id && <div className="target-marker">⚠</div>}
-            </div>
-          ))}
+          {enc.participants.map((p) => {
+            const isSelf = p.id === mp.selfId;
+            const selfAnimClass = isSelf
+              ? playerAnim === "attack"
+                ? " anim-attack-right"
+                : playerAnim === "dodge"
+                ? " anim-dodge"
+                : ""
+              : "";
+            return (
+              <div
+                key={p.id}
+                className={`battle-side party-member${
+                  enc.pendingAttack?.targetId === p.id ? " targeted" : ""
+                }${selfAnimClass}`}
+              >
+                <CharacterSprite kind={p.jobId} direction="right" scale={5} />
+                {enc.pendingAttack?.targetId === p.id && <div className="target-marker">⚠</div>}
+              </div>
+            );
+          })}
         </div>
         <div className="battle-ground" />
-        <div className="battle-side monster-side">
+        <div
+          className={`battle-side monster-side${
+            monsterAnim === "attack" ? " anim-attack-left" : monsterAnim === "dodge" ? " anim-dodge" : ""
+          }`}
+        >
           <MonsterSprite kind={monsterId} flip scale={monster.isBoss ? 9 : 7} />
         </div>
       </div>

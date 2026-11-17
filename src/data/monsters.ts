@@ -8,7 +8,7 @@ export const MONSTERS: MonsterDefinition[] = [
     name: "숲의 슬라임",
     icon: "🟢",
     hp: 80,
-    attackIntervalMs: 6000,
+    attackIntervalMs: 9000,
     xpReward: 35,
     lootTable: ["armor_cloth"],
     attacks: [
@@ -33,7 +33,7 @@ export const MONSTERS: MonsterDefinition[] = [
     name: "고블린 약탈자",
     icon: "👹",
     hp: 130,
-    attackIntervalMs: 5000,
+    attackIntervalMs: 7500,
     xpReward: 60,
     lootTable: ["wep_worn_sword", "wep_worn_symbol", "wep_worn_staff", "wep_worn_bow", "armor_chain"],
     attacks: [
@@ -58,7 +58,7 @@ export const MONSTERS: MonsterDefinition[] = [
     name: "숲의 수호자",
     icon: "🗿",
     hp: 320,
-    attackIntervalMs: 4200,
+    attackIntervalMs: 6500,
     xpReward: 260,
     isBoss: true,
     lootTable: [
@@ -99,7 +99,7 @@ export const MONSTERS: MonsterDefinition[] = [
     name: "얼음 망령",
     icon: "❄️",
     hp: 380,
-    attackIntervalMs: 4000,
+    attackIntervalMs: 6500,
     xpReward: 300,
     isBoss: true,
     lootTable: [
