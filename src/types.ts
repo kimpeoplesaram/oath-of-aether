@@ -70,6 +70,16 @@ export interface EquipmentItem {
 export interface PlayerEquipment {
   weaponId?: string;
   armorId?: string;
+  /** 장착한 장비의 품질(1~100). 종합 랭크(SSS~D) 계산에 쓰인다. */
+  weaponQuality?: number;
+  armorQuality?: number;
+}
+
+/** 장착하지 않은 여분 장비 한 벌. 같은 itemId라도 품질이 다를 수 있어 개별 보관한다. */
+export interface EquipmentStashEntry {
+  instanceId: string;
+  itemId: string;
+  quality: number; // 1~100
 }
 
 // ---------- 소비 아이템(포션) ----------
@@ -97,8 +107,8 @@ export interface PlayerCharacter {
   equipment: PlayerEquipment;
   inventory: PlayerInventory;
   gold: number; // 상점에서 포션을 구매하는 데 쓰는 재화. 몬스터를 처치하면 조금씩 얻는다.
-  /** 장착하지 않은 여분의 장비(id -> 보유 개수). 상점에서 골드로 판매할 수 있다. */
-  equipmentInventory: PlayerInventory;
+  /** 장착하지 않은 여분의 장비. 상점에서 골드로 판매할 수 있다. */
+  equipmentInventory: EquipmentStashEntry[];
   /** 누적 몬스터 처치 수 (업적 판정용). */
   totalKills: number;
   /** 한 번이라도 처치한 보스 몬스터 id 목록 (중복 없이). */

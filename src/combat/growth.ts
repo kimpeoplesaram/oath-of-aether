@@ -1,5 +1,10 @@
 import { getEquipment } from "../data/equipment";
-import type { PlayerCharacter, PlayerStats } from "../types";
+import { rollQuality } from "../data/powerRank";
+import type { EquipmentStashEntry, PlayerCharacter, PlayerStats } from "../types";
+
+function newStashEntry(itemId: string, quality: number): EquipmentStashEntry {
+  return { instanceId: `stash_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, itemId, quality };
+}
 
 /** 다음 레벨업에 필요한 누적 경험치 */
 export function xpToNextLevel(level: number): number {
@@ -55,31 +60,52 @@ export function gainXp(player: PlayerCharacter, amount: number): GainXpResult {
  * 새 장비를 획득했을 때, 현재 장착 중인 것보다 좋으면 자동 장착한다.
  * (인벤토리 UI 없이 "항상 최선의 장비를 착용" 하는 단순한 1차 구현)
  */
-export function maybeEquip(player: PlayerCharacter, itemId: string): { player: PlayerCharacter; equipped: boolean; itemName: string } {
+export function maybeEquip(
+  player: PlayerCharacter,
+  itemId: string
+): { player: PlayerCharacter; equipped: boolean; itemName: string; quality: number } {
   const item = getEquipment(itemId);
-  if (!item) return { player, equipped: false, itemName: "" };
+  if (!item) return { player, equipped: false, itemName: "", quality: 0 };
+  const quality = rollQuality();
 
   if (item.slot === "weapon") {
     if (item.jobId && item.jobId !== player.job.id) {
-      return { player, equipped: false, itemName: item.name };
+      return { player, equipped: false, itemName: item.name, quality };
     }
     const current = getEquipment(player.equipment.weaponId);
     if (!current || (item.atkBonus ?? 0) > (current.atkBonus ?? 0)) {
+      // 기존에 장착 중이던 무기는 버리지 않고 보관함으로 옮긴다.
+      const equipmentInventory = current
+        ? [...player.equipmentInventory, newStashEntry(current.id, player.equipment.weaponQuality ?? 50)]
+        : player.equipmentInventory;
       return {
-        player: { ...player, equipment: { ...player.equipment, weaponId: item.id } },
+        player: {
+          ...player,
+          equipment: { ...player.equipment, weaponId: item.id, weaponQuality: quality },
+          equipmentInventory,
+        },
         equipped: true,
         itemName: item.name,
+        quality,
       };
     }
   } else {
     const current = getEquipment(player.equipment.armorId);
     if (!current || (item.hpBonus ?? 0) > (current.hpBonus ?? 0)) {
+      const equipmentInventory = current
+        ? [...player.equipmentInventory, newStashEntry(current.id, player.equipment.armorQuality ?? 50)]
+        : player.equipmentInventory;
       return {
-        player: { ...player, equipment: { ...player.equipment, armorId: item.id } },
+        player: {
+          ...player,
+          equipment: { ...player.equipment, armorId: item.id, armorQuality: quality },
+          equipmentInventory,
+        },
         equipped: true,
         itemName: item.name,
+        quality,
       };
     }
   }
-  return { player, equipped: false, itemName: item.name };
+  return { player, equipped: false, itemName: item.name, quality };
 }

@@ -396,7 +396,7 @@ async function handleRegister(req, res) {
       questKillCount: 0,
       inventory: { potion_hp_small: 3, potion_mp_small: 2 },
       gold: 50,
-      equipmentInventory: {},
+      equipmentInventory: [],
       totalKills: 0,
       bossDefeatedIds: [],
       achievements: [],
@@ -469,7 +469,7 @@ async function handleSaveCharacter(req, res) {
   if (typeof questKillCount === "number") acc.character.questKillCount = questKillCount;
   if (inventory && typeof inventory === "object") acc.character.inventory = inventory;
   if (typeof gold === "number") acc.character.gold = gold;
-  if (equipmentInventory && typeof equipmentInventory === "object") acc.character.equipmentInventory = equipmentInventory;
+  if (Array.isArray(equipmentInventory)) acc.character.equipmentInventory = equipmentInventory;
   if (typeof totalKills === "number") acc.character.totalKills = totalKills;
   if (Array.isArray(bossDefeatedIds)) acc.character.bossDefeatedIds = bossDefeatedIds;
   if (Array.isArray(achievements)) acc.character.achievements = achievements;

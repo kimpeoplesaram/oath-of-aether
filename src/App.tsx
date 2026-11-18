@@ -15,6 +15,7 @@ import { getEquipment } from "./data/equipment";
 import { GRADE_LABELS, GRADE_SELL_PRICE } from "./data/grades";
 import { getConsumable } from "./data/items";
 import { ACHIEVEMENTS } from "./data/achievements";
+import { computePowerRank } from "./data/powerRank";
 import type { CombatResult } from "./combat/useCombat";
 import { useMultiplayer } from "./multiplayer/useMultiplayer";
 import { logout as apiLogout, saveCharacter, type AccountPayload } from "./multiplayer/accountApi";
@@ -125,17 +126,21 @@ export function App() {
         if (usable.length > 0) pool = usable;
       }
       const dropId = pool[Math.floor(Math.random() * pool.length)];
-      const { player: afterEquip, equipped, itemName } = maybeEquip(updated, dropId);
+      const { player: afterEquip, equipped, itemName, quality } = maybeEquip(updated, dropId);
       updated = afterEquip;
-      const gradeLabel = GRADE_LABELS[getEquipment(dropId)?.grade ?? "common"];
+      const dropDef = getEquipment(dropId);
+      const gradeLabel = GRADE_LABELS[dropDef?.grade ?? "common"];
+      const rank = dropDef ? computePowerRank(dropDef.grade, quality) : "";
       if (equipped) {
-        messages.push(`[${gradeLabel}] ${itemName} 획득! 자동 장착`);
+        messages.push(`[${rank}][${gradeLabel}] ${itemName} 획득! 자동 장착`);
       } else {
         // 장착하지 않은 장비는 버리지 않고 보관함에 넣어 상점에서 팔 수 있게 한다.
-        const nextEquipmentInventory = { ...updated.equipmentInventory };
-        nextEquipmentInventory[dropId] = (nextEquipmentInventory[dropId] ?? 0) + 1;
+        const nextEquipmentInventory = [
+          ...updated.equipmentInventory,
+          { instanceId: `stash_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, itemId: dropId, quality },
+        ];
         updated = { ...updated, equipmentInventory: nextEquipmentInventory };
-        messages.push(`[${gradeLabel}] ${itemName} 획득! (보관함에 보관됨)`);
+        messages.push(`[${rank}][${gradeLabel}] ${itemName} 획득! (보관함에 보관됨)`);
       }
     }
 
@@ -304,20 +309,21 @@ export function App() {
   }
 
   // 보관함의 여분 장비를 상점에 팔아 골드로 바꾼다.
-  function handleSellEquipment(itemId: string) {
+  function handleSellEquipment(instanceId: string) {
     if (!player) return;
-    const count = player.equipmentInventory[itemId] ?? 0;
-    if (count <= 0) return;
-    const item = getEquipment(itemId);
+    const entry = player.equipmentInventory.find((e) => e.instanceId === instanceId);
+    if (!entry) return;
+    const item = getEquipment(entry.itemId);
     if (!item) return;
-    const price = GRADE_SELL_PRICE[item.grade];
-    const nextEquipmentInventory = { ...player.equipmentInventory, [itemId]: count - 1 };
-    if (nextEquipmentInventory[itemId] <= 0) delete nextEquipmentInventory[itemId];
+    // 등급 기본가에 품질(1~100)을 반영해 0.5배~1.5배 범위로 가격을 조정한다.
+    const price = Math.round(GRADE_SELL_PRICE[item.grade] * (0.5 + entry.quality / 100));
+    const rank = computePowerRank(item.grade, entry.quality);
+    const nextEquipmentInventory = player.equipmentInventory.filter((e) => e.instanceId !== instanceId);
     const updated = { ...player, gold: player.gold + price, equipmentInventory: nextEquipmentInventory };
     setPlayer(updated);
     persistCharacter(updated);
     playSfx("click");
-    showToast(`${item.name} 판매! (+${price} G)`);
+    showToast(`[${rank}] ${item.name} 판매! (+${price} G)`);
   }
 
   function handleCreate(

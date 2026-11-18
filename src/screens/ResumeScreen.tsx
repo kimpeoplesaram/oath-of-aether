@@ -3,6 +3,7 @@ import { getJob } from "../data/jobs";
 import { getEquipment } from "../data/equipment";
 import { STARTER_GOLD, STARTER_INVENTORY } from "../data/items";
 import { computeStats } from "../combat/growth";
+import { computePowerRank } from "../data/powerRank";
 import type { MultiplayerJoinInput } from "./CharacterCreateScreen";
 import type { AccountPayload } from "../multiplayer/accountApi";
 import { randomRoomCode } from "../multiplayer/config";
@@ -51,7 +52,7 @@ export function ResumeScreen({ account, session, defaultServerUrl, onStart, onLo
     hp: 0,
     inventory: saved.inventory ?? { ...STARTER_INVENTORY },
     gold: typeof saved.gold === "number" ? saved.gold : STARTER_GOLD,
-    equipmentInventory: saved.equipmentInventory ?? {},
+    equipmentInventory: saved.equipmentInventory ?? [],
     totalKills: saved.totalKills ?? 0,
     bossDefeatedIds: (saved.bossDefeatedIds ?? []) as PlayerCharacter["bossDefeatedIds"],
     achievements: saved.achievements ?? [],
@@ -61,6 +62,8 @@ export function ResumeScreen({ account, session, defaultServerUrl, onStart, onLo
 
   const weapon = getEquipment(saved.equipment?.weaponId);
   const armor = getEquipment(saved.equipment?.armorId);
+  const weaponRank = weapon ? computePowerRank(weapon.grade, saved.equipment?.weaponQuality ?? 50) : null;
+  const armorRank = armor ? computePowerRank(armor.grade, saved.equipment?.armorQuality ?? 50) : null;
 
   function handleStart() {
     const multiplayer =
@@ -91,7 +94,8 @@ export function ResumeScreen({ account, session, defaultServerUrl, onStart, onLo
             HP {character.hp}/{stats.maxHp} · 공격력 {stats.atk}
           </p>
           <p className="combatant-sub" style={{ margin: "4px 0 0" }}>
-            무기: {weapon?.name ?? "없음"} · 방어구: {armor?.name ?? "없음"}
+            무기: {weapon ? `[${weaponRank}] ${weapon.name}` : "없음"} · 방어구:{" "}
+            {armor ? `[${armorRank}] ${armor.name}` : "없음"}
           </p>
         </div>
       </div>

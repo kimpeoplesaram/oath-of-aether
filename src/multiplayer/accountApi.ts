@@ -1,20 +1,20 @@
 // 계정/길드 REST API 클라이언트. 멀티플레이 서버(server/index.js)와 같은 호스트에 붙는다.
 // 서버 주소는 ws:// 또는 wss:// 로 입력받으므로 http(s)로 변환해 호출한다.
 
-import type { JobId } from "../types";
+import type { EquipmentStashEntry, JobId } from "../types";
 
 export interface SavedCharacter {
   name: string;
   jobId: JobId;
   level: number;
   xp: number;
-  equipment: { weaponId?: string; armorId?: string };
+  equipment: { weaponId?: string; armorId?: string; weaponQuality?: number; armorQuality?: number };
   hp?: number;
   questIndex?: number;
   questKillCount?: number;
   inventory?: Record<string, number>;
   gold?: number;
-  equipmentInventory?: Record<string, number>;
+  equipmentInventory?: EquipmentStashEntry[];
   totalKills?: number;
   bossDefeatedIds?: string[];
   achievements?: string[];
@@ -147,13 +147,13 @@ export function saveCharacter(
   data: {
     level: number;
     xp: number;
-    equipment: { weaponId?: string; armorId?: string };
+    equipment: { weaponId?: string; armorId?: string; weaponQuality?: number; armorQuality?: number };
     hp: number;
     questIndex?: number;
     questKillCount?: number;
     inventory?: Record<string, number>;
     gold?: number;
-    equipmentInventory?: Record<string, number>;
+    equipmentInventory?: EquipmentStashEntry[];
     totalKills?: number;
     bossDefeatedIds?: string[];
     achievements?: string[];

@@ -2,13 +2,14 @@ import { useState } from "react";
 import { CONSUMABLES } from "../data/items";
 import { getEquipment } from "../data/equipment";
 import { GRADE_COLORS, GRADE_LABELS, GRADE_SELL_PRICE } from "../data/grades";
-import type { PlayerInventory } from "../types";
+import { RANK_COLORS, computePowerRank } from "../data/powerRank";
+import type { EquipmentStashEntry } from "../types";
 
 interface Props {
   gold: number;
   onBuy: (itemId: string) => void;
-  equipmentInventory: PlayerInventory;
-  onSellEquipment: (itemId: string) => void;
+  equipmentInventory: EquipmentStashEntry[];
+  onSellEquipment: (instanceId: string) => void;
 }
 
 type Tab = "buy" | "sell";
@@ -17,8 +18,6 @@ type Tab = "buy" | "sell";
 export function ShopPanel({ gold, onBuy, equipmentInventory, onSellEquipment }: Props) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("buy");
-
-  const sellableIds = Object.keys(equipmentInventory).filter((id) => (equipmentInventory[id] ?? 0) > 0);
 
   return (
     <div className="shop-panel-anchor">
@@ -47,7 +46,7 @@ export function ShopPanel({ gold, onBuy, equipmentInventory, onSellEquipment }: 
               className={`shop-tab-btn${tab === "sell" ? " active" : ""}`}
               onClick={() => setTab("sell")}
             >
-              판매 {sellableIds.length > 0 ? `(${sellableIds.length})` : ""}
+              판매 {equipmentInventory.length > 0 ? `(${equipmentInventory.length})` : ""}
             </button>
           </div>
           <div className="shop-list">
@@ -75,23 +74,30 @@ export function ShopPanel({ gold, onBuy, equipmentInventory, onSellEquipment }: 
                 );
               })}
             {tab === "sell" &&
-              (sellableIds.length === 0 ? (
+              (equipmentInventory.length === 0 ? (
                 <p className="login-hint">판매할 여분 장비가 없습니다.</p>
               ) : (
-                sellableIds.map((itemId) => {
-                  const item = getEquipment(itemId);
+                equipmentInventory.map((entry) => {
+                  const item = getEquipment(entry.itemId);
                   if (!item) return null;
-                  const price = GRADE_SELL_PRICE[item.grade];
-                  const count = equipmentInventory[itemId] ?? 0;
+                  const price = Math.round(GRADE_SELL_PRICE[item.grade] * (0.5 + entry.quality / 100));
+                  const rank = computePowerRank(item.grade, entry.quality);
                   return (
-                    <div key={itemId} className="shop-row">
+                    <div key={entry.instanceId} className="shop-row">
                       <div className="shop-item-info">
-                        <span className="shop-item-name" style={{ color: GRADE_COLORS[item.grade] }}>
-                          [{GRADE_LABELS[item.grade]}] {item.name}
+                        <span className="shop-item-name">
+                          <span style={{ color: RANK_COLORS[rank], fontWeight: 700 }}>[{rank}]</span>{" "}
+                          <span style={{ color: GRADE_COLORS[item.grade] }}>
+                            [{GRADE_LABELS[item.grade]}] {item.name}
+                          </span>
                         </span>
-                        <span className="shop-item-desc">보유 {count}개</span>
+                        <span className="shop-item-desc">품질 {entry.quality}</span>
                       </div>
-                      <button type="button" className="btn-secondary tiny" onClick={() => onSellEquipment(itemId)}>
+                      <button
+                        type="button"
+                        className="btn-secondary tiny"
+                        onClick={() => onSellEquipment(entry.instanceId)}
+                      >
                         {price} G 판매
                       </button>
                     </div>
