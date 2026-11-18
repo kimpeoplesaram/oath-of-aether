@@ -5,12 +5,14 @@ import { CharacterCreateScreen, type MultiplayerJoinInput } from "./screens/Char
 import { LoginScreen } from "./screens/LoginScreen";
 import { ResumeScreen } from "./screens/ResumeScreen";
 import { OverworldScreen, type QuestStatus } from "./screens/OverworldScreen";
+import { StoryIntroScreen } from "./screens/StoryIntroScreen";
 import { CombatScreen } from "./screens/CombatScreen";
 import { CoopCombatScreen } from "./screens/CoopCombatScreen";
 import { getMonster } from "./data/monsters";
 import { JOB_QUESTS } from "./data/quests";
 import { DUNGEON_PORTALS, MONSTER_RESPAWN_MS, MONSTER_SPAWNS } from "./data/overworld";
 import { computeStats, gainXp, maybeEquip } from "./combat/growth";
+import { getNewlyUnlockedSkills } from "./combat/engine";
 import { getEquipment } from "./data/equipment";
 import { GRADE_LABELS, GRADE_SELL_PRICE } from "./data/grades";
 import { getConsumable } from "./data/items";
@@ -34,6 +36,11 @@ export function App() {
   const [encounter, setEncounter] = useState<ActiveEncounter | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [multiplayer, setMultiplayer] = useState<MultiplayerJoinInput | null>(null);
+  const [pendingStart, setPendingStart] = useState<{
+    character: PlayerCharacter;
+    mpJoin: MultiplayerJoinInput | null;
+    resumeProgress?: { questIndex: number; questKillCount: number };
+  } | null>(null);
   const [questIndex, setQuestIndex] = useState(0);
   const [questKillCount, setQuestKillCount] = useState(0);
   const [accountSession, setAccountSession] = useState<AccountSession | null>(null);
@@ -92,6 +99,7 @@ export function App() {
       totalKills: p.totalKills,
       bossDefeatedIds: p.bossDefeatedIds,
       achievements: p.achievements,
+      hasSeenTutorial: p.hasSeenTutorial,
     }).catch(() => {
       /* 저장 실패는 조용히 무시 — 다음 기회에 다시 저장됨 */
     });
@@ -112,6 +120,9 @@ export function App() {
     if (leveledUp) {
       messages.push(`레벨 업! Lv.${updated.level} (+${levelsGained})`);
       playSfx("levelUp");
+      for (const skill of getNewlyUnlockedSkills(updated.job, base.level, updated.level)) {
+        messages.push(`📖 새 스킬 습득: ${skill.name} ("${skill.inputPhrase}")`);
+      }
     }
 
     const dropChance = monsterDef.isBoss ? 1 : 0.5;
@@ -178,6 +189,7 @@ export function App() {
     if (quest && (!quest.targetMonsterId || quest.targetMonsterId === monsterId)) {
       const nextCount = questKillCount + 1;
       if (nextCount >= quest.targetCount) {
+        const questLevelBefore = updated.level;
         const { player: afterQuestXp, leveledUp: questLevelUp, levelsGained: questLevels } = gainXp(
           updated,
           quest.rewardXp
@@ -187,6 +199,9 @@ export function App() {
         if (questLevelUp) {
           messages.push(`레벨 업! Lv.${updated.level} (+${questLevels})`);
           playSfx("levelUp");
+          for (const skill of getNewlyUnlockedSkills(updated.job, questLevelBefore, updated.level)) {
+            messages.push(`📖 새 스킬 습득: ${skill.name} ("${skill.inputPhrase}")`);
+          }
         }
         newQuestIndex = questIndex + 1;
         newQuestKillCount = 0;
@@ -326,7 +341,15 @@ export function App() {
     showToast(`[${rank}] ${item.name} 판매! (+${price} G)`);
   }
 
-  function handleCreate(
+  // 첫 솔로 전투 튜토리얼을 마쳤을 때 호출 — 다시는 뜨지 않도록 저장한다.
+  function handleTutorialDone() {
+    if (!player) return;
+    const updated = { ...player, hasSeenTutorial: true };
+    setPlayer(updated);
+    persistCharacter(updated);
+  }
+
+  function finalizeStart(
     character: PlayerCharacter,
     mpJoin: MultiplayerJoinInput | null,
     resumeProgress?: { questIndex: number; questKillCount: number }
@@ -337,6 +360,26 @@ export function App() {
     setQuestKillCount(resumeProgress?.questKillCount ?? 0);
     setMultiplayer(mpJoin);
     setScreen("overworld");
+  }
+
+  function handleCreate(
+    character: PlayerCharacter,
+    mpJoin: MultiplayerJoinInput | null,
+    resumeProgress?: { questIndex: number; questKillCount: number }
+  ) {
+    if (!resumeProgress) {
+      // 신규 캐릭터를 막 만들었을 때만 세계관 인트로를 보여준다 (이어하기는 건너뜀).
+      setPendingStart({ character, mpJoin, resumeProgress });
+      setScreen("story");
+      return;
+    }
+    finalizeStart(character, mpJoin, resumeProgress);
+  }
+
+  function handleStoryContinue() {
+    if (!pendingStart) return;
+    finalizeStart(pendingStart.character, pendingStart.mpJoin, pendingStart.resumeProgress);
+    setPendingStart(null);
   }
 
   function handleLoggedIn(session: AccountSession, account: AccountPayload, wsServerUrl: string) {
@@ -416,14 +459,25 @@ export function App() {
   const quest = jobQuests[questIndex];
   const questStatus: QuestStatus | null = player
     ? quest
-      ? { title: quest.title, description: quest.description, progress: questKillCount, target: quest.targetCount, done: false }
-      : { title: "", description: "", progress: 0, target: 0, done: true }
+      ? {
+          title: quest.title,
+          description: quest.description,
+          progress: questKillCount,
+          target: quest.targetCount,
+          done: false,
+          targetMonsterId: quest.targetMonsterId ?? null,
+        }
+      : { title: "", description: "", progress: 0, target: 0, done: true, targetMonsterId: null }
     : null;
 
   return (
     <div
       className={`app-shell${
-        screen === "login" ? " app-shell-wide" : screen === "overworld" || screen === "combat" ? " app-shell-game" : ""
+        screen === "login" || screen === "story"
+          ? " app-shell-wide"
+          : screen === "overworld" || screen === "combat"
+          ? " app-shell-game"
+          : ""
       }`}
     >
       {screen === "title" && (
@@ -434,6 +488,10 @@ export function App() {
       )}
 
       {screen === "create" && <CharacterCreateScreen onCreate={handleCreate} />}
+
+      {screen === "story" && pendingStart && (
+        <StoryIntroScreen job={pendingStart.character.job} onContinue={handleStoryContinue} />
+      )}
 
       {screen === "login" && <LoginScreen onLoggedIn={handleLoggedIn} onBack={() => setScreen("title")} />}
 
@@ -481,6 +539,8 @@ export function App() {
           inventory={player.inventory}
           onUseItem={consumeInventoryItem}
           onResolved={handleResolvedSolo}
+          showTutorial={!player.hasSeenTutorial}
+          onTutorialDone={handleTutorialDone}
         />
       )}
 

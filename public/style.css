@@ -194,7 +194,48 @@ button {
 .row-actions { display: flex; justify-content: space-between; align-items: center; }
 
 /* ---------- Combat Screen ---------- */
-.combat-screen { display: flex; flex-direction: column; gap: 18px; }
+.combat-screen { display: flex; flex-direction: column; gap: 18px; position: relative; }
+
+.tutorial-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6,6,12,0.72);
+  z-index: 50;
+  border-radius: inherit;
+}
+.tutorial-box {
+  width: min(480px, 88%);
+  background: rgba(16,16,26,0.97);
+  border: 1px solid var(--accent-gold);
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0,0,0,0.65);
+  padding: 22px 24px;
+  animation: fadeSlideUp 0.2s ease-out;
+}
+.tutorial-step-label {
+  font-size: 0.72rem;
+  color: var(--accent-gold);
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+.tutorial-title {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+}
+.tutorial-body {
+  margin: 0 0 18px;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--text-dim, #c9c9d6);
+}
+.tutorial-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
 
 .combatants {
   display: grid;
@@ -741,6 +782,34 @@ button {
 .quest-banner.done { border-color: var(--ok); color: var(--ok); }
 .quest-desc { color: var(--text-dim); }
 .quest-progress { margin-left: auto; color: var(--accent-gold); font-weight: 700; }
+.quest-arrow {
+  color: #ffe08a;
+  font-weight: 700;
+  font-size: 1rem;
+  animation: questArrowPulse 1s ease-in-out infinite;
+}
+@keyframes questArrowPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.quest-marker {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.95rem;
+  animation: questMarkerBob 1.1s ease-in-out infinite;
+  z-index: 2;
+  pointer-events: none;
+}
+@keyframes questMarkerBob {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, -5px); }
+}
+.wander-entity.quest-target-glow {
+  filter: drop-shadow(0 0 6px #ffe08a) drop-shadow(0 0 12px #ffcf4a);
+}
 
 /* 퀘스트 배너/힌트는 더 이상 문서 흐름 안에 있지 않고, 카메라 뷰 위에 떠 있는
    오버레이다(= .overworld-world 안에 있지 않으므로 카메라를 따라 움직이지 않는다). */
@@ -809,6 +878,12 @@ button {
 
 .minimap-remote { background: var(--accent-ether); }
 .minimap-monster { background: var(--hp-red); }
+.minimap-quest-target {
+  background: #ffe08a;
+  box-shadow: 0 0 5px 1px rgba(255,224,138,0.9);
+  width: 7px;
+  height: 7px;
+}
 .minimap-portal {
   width: 8px;
   height: 8px;
@@ -882,6 +957,74 @@ button {
   width: 0;
   height: 0;
 }
+
+.npc-marker {
+  position: absolute;
+  width: 0;
+  height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.npc-avatar {
+  font-size: 1.8rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+  transform: translateY(-36px);
+}
+.npc-marker.targetable .npc-avatar {
+  filter: drop-shadow(0 0 6px #ffe08a) drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+}
+.npc-name-tag {
+  position: absolute;
+  top: -14px;
+  white-space: nowrap;
+  font-size: 0.62rem;
+  color: var(--accent-gold);
+  background: rgba(10,11,20,0.7);
+  padding: 1px 6px;
+  border-radius: 4px;
+  transform: translateX(-50%);
+}
+
+.npc-dialogue-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 60px;
+  z-index: 20;
+  pointer-events: none;
+}
+.npc-dialogue-box {
+  pointer-events: auto;
+  width: min(560px, 86%);
+  background: rgba(14,14,22,0.95);
+  border: 1px solid var(--accent-gold);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  animation: fadeSlideUp 0.2s ease-out;
+}
+.npc-dialogue-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+.npc-dialogue-icon { font-size: 1.2rem; }
+.npc-dialogue-name { flex: 1; }
+.npc-dialogue-body {
+  padding: 12px 16px 16px;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.npc-dialogue-body p { margin: 0 0 8px; }
+.npc-dialogue-body p:last-child { margin-bottom: 0; }
 
 /* 포털 뒤에 세워 둔 보스 실루엣. 포털 원 바로 위, 중앙에 크게 떠 있어서 멀리서도
    "저기 보스가 있다"는 게 한눈에 보인다. */
@@ -1603,3 +1746,66 @@ button {
   box-shadow: 0 4px 12px rgba(0,0,0,0.35);
 }
 .sound-toggle-btn:hover { opacity: 1; }
+
+.story-intro-screen {
+  position: relative;
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: radial-gradient(circle at 50% 30%, rgba(90,70,160,0.18), transparent 60%), var(--bg-panel);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.story-skip-btn {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  padding: 6px 12px;
+  cursor: pointer;
+  z-index: 2;
+}
+.story-skip-btn:hover { color: var(--text-main); border-color: var(--accent-gold); }
+.story-intro-content {
+  max-width: 640px;
+  text-align: center;
+}
+.story-intro-title {
+  color: var(--accent-gold);
+  letter-spacing: 0.08em;
+  margin: 0 0 28px;
+  font-size: 1.8rem;
+}
+.story-paragraphs { display: flex; flex-direction: column; gap: 16px; }
+.story-paragraph {
+  margin: 0;
+  line-height: 1.8;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  animation: storyFadeIn 1.1s ease-out both;
+}
+@keyframes storyFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.story-final {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.story-final-line {
+  color: var(--accent-gold);
+  font-weight: 600;
+}
+.story-continue-btn {
+  font-size: 1rem;
+  padding: 12px 32px;
+}

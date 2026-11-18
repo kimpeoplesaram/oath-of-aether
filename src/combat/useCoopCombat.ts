@@ -18,7 +18,7 @@ export function useCoopCombat(
   player: PlayerCharacter,
   stats: PlayerStats
 ) {
-  const [currentSkill, setCurrentSkill] = useState<Skill>(() => pickSkill(player.job));
+  const [currentSkill, setCurrentSkill] = useState<Skill>(() => pickSkill(player.job, undefined, undefined, player.level));
   const [mana, setMana] = useState(stats.maxMp);
   const manaRef = useRef(mana);
   manaRef.current = mana;
@@ -206,7 +206,7 @@ export function useCoopCombat(
           const manaAfterCast = Math.max(0, manaRef.current - currentSkill.mpCost);
           setMana(manaAfterCast);
           manaRef.current = manaAfterCast;
-          setCurrentSkill(pickSkill(player.job, currentSkill.id, manaAfterCast));
+          setCurrentSkill(pickSkill(player.job, currentSkill.id, manaAfterCast, player.level));
         }
         setTyped("");
       }

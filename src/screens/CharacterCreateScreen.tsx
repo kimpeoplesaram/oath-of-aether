@@ -40,6 +40,7 @@ export function CharacterCreateScreen({ onCreate }: Props) {
       totalKills: 0,
       bossDefeatedIds: [],
       achievements: [],
+      hasSeenTutorial: false,
     };
     const multiplayer =
       coopMode === "host"

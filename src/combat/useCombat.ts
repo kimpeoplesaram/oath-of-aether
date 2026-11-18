@@ -29,12 +29,13 @@ export function useCombat(
   player: PlayerCharacter,
   monsterDef: MonsterDefinition,
   startHp: number,
-  stats: PlayerStats
+  stats: PlayerStats,
+  paused = false
 ) {
   const [playerHp, setPlayerHp] = useState(startHp);
   const [mana, setMana] = useState(stats.maxMp);
   const [monsterHp, setMonsterHp] = useState(monsterDef.hp);
-  const [currentSkill, setCurrentSkill] = useState<Skill>(() => pickSkill(player.job));
+  const [currentSkill, setCurrentSkill] = useState<Skill>(() => pickSkill(player.job, undefined, undefined, player.level));
   const [incoming, setIncoming] = useState<IncomingAttack | null>(null);
   const [typed, setTyped] = useState("");
   const [now, setNow] = useState(() => Date.now());
@@ -48,6 +49,11 @@ export function useCombat(
   const [debuffUntil, setDebuffUntil] = useState(0);
   const [debuffRatio, setDebuffRatio] = useState(0);
   const debuffRef = useRef({ until: 0, ratio: 0 });
+  // 혼자 싸울 때 "도발" 스킬은 아군이 없어 의미가 없으므로, 대신 자신이 받는
+  // 피해를 줄이는 방어 태세로 바뀐다 (협동 전투에서는 실제 도발 효과 그대로).
+  const [guardUntil, setGuardUntil] = useState(0);
+  const [guardRatio, setGuardRatio] = useState(0);
+  const guardRef = useRef({ until: 0, ratio: 0 });
   const {
     popups,
     bursts,
@@ -118,6 +124,13 @@ export function useCombat(
       const t = Date.now();
       setNow(t);
 
+      // 튜토리얼 등으로 일시 정지된 동안에는 공격 타이머를 그대로 밀어두어,
+      // 정지가 끝났을 때 갑자기 몬스터가 공격하지 않도록 한다.
+      if (paused) {
+        nextAttackAtRef.current += 50;
+        return;
+      }
+
       // 마나는 가만히 있어도 천천히 회복된다 (최대치의 약 4%/초).
       if (manaRef.current < stats.maxMp) {
         setMana((m: number) => Math.min(stats.maxMp, m + stats.maxMp * 0.04 * 0.05));
@@ -133,8 +146,11 @@ export function useCombat(
         pushLog(attack.telegraphText, "system");
       } else if (incomingRef.current && t >= incomingRef.current.deadlineAt) {
         const debuffActive = t < debuffRef.current.until;
+        const guardActive = t < guardRef.current.until;
         const dmg = Math.round(
-          incomingRef.current.attack.damage * (debuffActive ? 1 - debuffRef.current.ratio : 1)
+          incomingRef.current.attack.damage *
+            (debuffActive ? 1 - debuffRef.current.ratio : 1) *
+            (guardActive ? 1 - guardRef.current.ratio : 1)
         );
         setPlayerHp((hp: number) => Math.max(0, hp - dmg));
         flash("player");
@@ -164,6 +180,7 @@ export function useCombat(
     triggerFlash,
     nextAttackInterval,
     stats.maxMp,
+    paused,
   ]);
 
   // 승패 판정
@@ -279,13 +296,20 @@ export function useCombat(
             playSfx("heal");
             pushPopup("player", `+${effect.amount}`, "heal");
             pushLog(`${currentSkill.name}! 체력을 ${effect.amount} 회복했습니다.`, "hit");
-          } else {
-            pushLog(`${currentSkill.name}! 적의 시선을 끌었다.`, "hit");
+          } else if (effect.kind === "taunt") {
+            // 혼자 싸울 때는 방어 태세로 전환해 받는 피해를 줄인다.
+            const until = Date.now() + (effect.durationMs ?? 8000);
+            guardRef.current = { until, ratio: effect.amount };
+            setGuardUntil(until);
+            setGuardRatio(effect.amount);
+            playSfx("buff");
+            pushPopup("player", "방어 태세!", "buff");
+            pushLog(`${currentSkill.name}! 방어 태세에 들어가 받는 피해가 줄어듭니다.`, "hit");
           }
           const manaAfterCast = Math.max(0, manaRef.current - currentSkill.mpCost);
           setMana(manaAfterCast);
           manaRef.current = manaAfterCast;
-          setCurrentSkill(pickSkill(player.job, currentSkill.id, manaAfterCast));
+          setCurrentSkill(pickSkill(player.job, currentSkill.id, manaAfterCast, player.level));
         }
         setTyped("");
       }
@@ -375,5 +399,6 @@ export function useCombat(
     applyManaRestore,
     buffActive: Date.now() < buffUntil,
     debuffActive: Date.now() < debuffUntil,
+    guardActive: Date.now() < guardUntil,
   };
 }

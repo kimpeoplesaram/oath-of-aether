@@ -20,6 +20,7 @@ import { PartyPanel } from "./PartyPanel";
 import { InventoryPanel } from "./InventoryPanel";
 import { ShopPanel } from "./ShopPanel";
 import { AchievementsPanel } from "./AchievementsPanel";
+import { NPCS, getNpc } from "../data/npcs";
 
 export interface QuestStatus {
   title: string;
@@ -27,6 +28,8 @@ export interface QuestStatus {
   progress: number;
   target: number;
   done: boolean;
+  /** 현재 퀘스트가 지정하는 몬스터 종류. 없으면(어떤 몬스터든 상관없음) null. */
+  targetMonsterId: MonsterId | null;
 }
 
 interface Props {
@@ -80,7 +83,10 @@ function randomWanderVelocity(): { vx: number; vy: number } {
   return { vx: Math.cos(angle) * MONSTER_WANDER_SPEED, vy: Math.sin(angle) * MONSTER_WANDER_SPEED };
 }
 
-type Interactable = { kind: "monster"; instanceId: string; monsterId: MonsterId } | { kind: "portal"; instanceId: string; monsterId: MonsterId };
+type Interactable =
+  | { kind: "monster"; instanceId: string; monsterId: MonsterId }
+  | { kind: "portal"; instanceId: string; monsterId: MonsterId }
+  | { kind: "npc"; instanceId: string; monsterId: null };
 
 export function OverworldScreen({
   player,
@@ -112,6 +118,7 @@ export function OverworldScreen({
     return init;
   });
   const [target, setTarget] = useState<Interactable | null>(null);
+  const [activeNpcId, setActiveNpcId] = useState<string | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 960, height: 540 });
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -147,6 +154,10 @@ export function OverworldScreen({
   tryInteractRef.current = () => {
     const t = targetRef.current;
     if (!t || encounterLockRef.current) return;
+    if (t.kind === "npc") {
+      setActiveNpcId((cur) => (cur === t.instanceId ? null : t.instanceId));
+      return;
+    }
     if (t.kind === "portal" && !questsComplete) {
       onPortalLocked();
       return;
@@ -293,6 +304,13 @@ export function OverworldScreen({
         best = { kind: "portal", instanceId: portal.instanceId, monsterId: portal.monsterId };
       }
     }
+    for (const npc of NPCS) {
+      const d = Math.hypot(px - npc.x, py - npc.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = { kind: "npc", instanceId: npc.id, monsterId: null };
+      }
+    }
     setTarget((cur) => {
       if (cur && best && cur.instanceId === best.instanceId && cur.kind === best.kind) return cur;
       return best;
@@ -309,6 +327,34 @@ export function OverworldScreen({
     0,
     Math.min(MAP_HEIGHT - viewportSize.height, pos.y + PLAYER_SIZE / 2 - viewportSize.height / 2),
   );
+
+  // 현재 퀘스트 대상 몬스터 중 가장 가까운 것의 방향을 화살표로 알려준다.
+  let questArrow: string | null = null;
+  if (questStatus && !questStatus.done) {
+    const px = pos.x + PLAYER_SIZE / 2;
+    const py = pos.y + PLAYER_SIZE / 2;
+    let nearest: { x: number; y: number } | null = null;
+    let nearestDist = Infinity;
+    for (const spawn of MONSTER_SPAWNS) {
+      if (clearedInstanceIds.includes(spawn.instanceId)) continue;
+      if (questStatus.targetMonsterId !== null && questStatus.targetMonsterId !== spawn.monsterId) continue;
+      const w = monsterWander[spawn.instanceId];
+      const sx = w?.x ?? spawn.x;
+      const sy = w?.y ?? spawn.y;
+      const d = Math.hypot(px - sx, py - sy);
+      if (d < nearestDist) {
+        nearestDist = d;
+        nearest = { x: sx, y: sy };
+      }
+    }
+    if (nearest && nearestDist > INTERACT_RANGE) {
+      const dx = nearest.x - px;
+      const dy = nearest.y - py;
+      const deg = (Math.atan2(dy, dx) * (180 / Math.PI) + 360) % 360;
+      const dirs = ["→", "↘", "↓", "↙", "←", "↖", "↑", "↗"];
+      questArrow = dirs[Math.round(deg / 45) % 8];
+    }
+  }
 
   return (
     <div className="overworld-screen">
@@ -371,6 +417,21 @@ export function OverworldScreen({
             />
           ))}
 
+          {NPCS.map((npc) => {
+            const isTarget = target?.kind === "npc" && target.instanceId === npc.id;
+            return (
+              <div
+                key={npc.id}
+                className={`npc-marker${isTarget ? " targetable" : ""}`}
+                style={{ left: npc.x, top: npc.y }}
+              >
+                <span className="npc-avatar">{npc.icon}</span>
+                <span className="npc-name-tag">{npc.name}</span>
+                {isTarget && <div className="interact-prompt">E 대화</div>}
+              </div>
+            );
+          })}
+
           {DUNGEON_PORTALS.map((portal) => {
             const isTarget = target?.kind === "portal" && target.instanceId === portal.instanceId;
             return (
@@ -398,12 +459,19 @@ export function OverworldScreen({
           {MONSTER_SPAWNS.filter((s) => !clearedInstanceIds.includes(s.instanceId)).map((spawn) => {
             const w = monsterWander[spawn.instanceId];
             const isTarget = target?.kind === "monster" && target.instanceId === spawn.instanceId;
+            const isQuestTarget =
+              !!questStatus &&
+              !questStatus.done &&
+              (questStatus.targetMonsterId === null || questStatus.targetMonsterId === spawn.monsterId);
             return (
               <div
                 key={spawn.instanceId}
-                className={`overworld-entity wander-entity${isTarget ? " targetable" : ""}`}
+                className={`overworld-entity wander-entity${isTarget ? " targetable" : ""}${
+                  isQuestTarget ? " quest-target-glow" : ""
+                }`}
                 style={{ left: w?.x ?? spawn.x, top: w?.y ?? spawn.y }}
               >
+                {isQuestTarget && <div className="quest-marker">⭐</div>}
                 <MonsterSprite kind={spawn.monsterId} scale={3.8} />
                 {isTarget && <div className="interact-prompt">E 전투</div>}
               </div>
@@ -443,10 +511,14 @@ export function OverworldScreen({
             const w = monsterWander[spawn.instanceId];
             const x = w?.x ?? spawn.x;
             const y = w?.y ?? spawn.y;
+            const isQuestTarget =
+              !!questStatus &&
+              !questStatus.done &&
+              (questStatus.targetMonsterId === null || questStatus.targetMonsterId === spawn.monsterId);
             return (
               <div
                 key={spawn.instanceId}
-                className="minimap-dot minimap-monster"
+                className={`minimap-dot minimap-monster${isQuestTarget ? " minimap-quest-target" : ""}`}
                 style={{ left: `${(x / MAP_WIDTH) * 100}%`, top: `${(y / MAP_HEIGHT) * 100}%` }}
               />
             );
@@ -473,6 +545,7 @@ export function OverworldScreen({
                 <span className="quest-progress">
                   {questStatus.progress}/{questStatus.target}
                 </span>
+                {questArrow && <span className="quest-arrow">{questArrow} 이 방향으로</span>}
               </>
             )}
           </div>
@@ -501,8 +574,36 @@ export function OverworldScreen({
 
         <AchievementsPanel achievements={player.achievements} />
 
+        {activeNpcId &&
+          (() => {
+            const npc = getNpc(activeNpcId);
+            if (!npc) return null;
+            return (
+              <div className="npc-dialogue-overlay">
+                <div className="npc-dialogue-box">
+                  <div className="npc-dialogue-header">
+                    <span className="npc-dialogue-icon">{npc.icon}</span>
+                    <span className="npc-dialogue-name">{npc.name}</span>
+                    <button
+                      type="button"
+                      className="shop-close-btn"
+                      onClick={() => setActiveNpcId(null)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="npc-dialogue-body">
+                    {npc.lines.map((line, i) => (
+                      <p key={i}>{line}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
         <div className="overworld-hint overlay-hint bottom-hint">
-          방향키 또는 WASD로 이동 · 몬스터나 던전 입구에 가까이 가서 E키를 누르면 전투가 시작됩니다 · 쓰러뜨린 몬스터는 잠시 후 다시 나타납니다 · 보스는 모든 퀘스트를 완료해야 도전할 수 있습니다
+          방향키 또는 WASD로 이동 · 몬스터나 던전 입구에 가까이 가서 E키를 누르면 전투가 시작됩니다 · NPC 근처에서 E키를 누르면 대화할 수 있습니다 · 쓰러뜨린 몬스터는 잠시 후 다시 나타납니다 · 보스는 모든 퀘스트를 완료해야 도전할 수 있습니다
           {multiplayerActive && " · 보스전은 같은 방에 있는 친구와 함께 싸웁니다"}
         </div>
       </div>

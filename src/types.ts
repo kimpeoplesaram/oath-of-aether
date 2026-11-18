@@ -16,6 +16,8 @@ export interface Skill {
   value?: number;
   /** 스킬 사용에 필요한 마나(MP). 직업마다 하나씩 있는 "기본" 스킬은 0이라 마나가 없어도 항상 쓸 수 있다. */
   mpCost: number;
+  /** 이 스킬을 배우는 데 필요한 레벨. 생략하면 1(처음부터 사용 가능). */
+  unlockLevel?: number;
 }
 
 export interface JobDefinition {
@@ -115,6 +117,8 @@ export interface PlayerCharacter {
   bossDefeatedIds: MonsterId[];
   /** 달성한 업적 id 목록. */
   achievements: string[];
+  /** 첫 솔로 전투 튜토리얼을 이미 봤는지 여부. */
+  hasSeenTutorial: boolean;
 }
 
 /** 레벨/장비를 반영한 실질 전투 스탯 */
@@ -124,7 +128,7 @@ export interface PlayerStats {
   atk: number;
 }
 
-export type GameScreen = "title" | "create" | "login" | "resume" | "overworld" | "combat";
+export type GameScreen = "title" | "create" | "login" | "resume" | "story" | "overworld" | "combat";
 
 /** 로그인된 계정 세션. 서버에 등록된 계정에서만 존재한다 (게스트 플레이는 null). */
 export interface AccountSession {

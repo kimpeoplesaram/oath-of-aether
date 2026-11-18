@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCombat, type CombatResult } from "../combat/useCombat";
-import { diffPhrase } from "../combat/engine";
+import { diffPhrase, getUnlockedSkills } from "../combat/engine";
 import { CharacterSprite, MonsterSprite } from "../render/SpriteCanvas";
 import { HitBurst } from "./HitBurst";
 import { InventoryPanel } from "./InventoryPanel";
@@ -15,9 +15,63 @@ interface Props {
   inventory: PlayerInventory;
   onUseItem: (itemId: string) => boolean;
   onResolved: (result: CombatResult, finalHp: number) => void;
+  /** 첫 솔로 전투인지 — true면 시간을 멈추고 튜토리얼을 먼저 보여준다. */
+  showTutorial?: boolean;
+  /** 튜토리얼을 다 보고 닫았을 때 호출 (다시 뜨지 않도록 저장). */
+  onTutorialDone?: () => void;
 }
 
-export function CombatScreen({ player, monster, startHp, stats, inventory, onUseItem, onResolved }: Props) {
+interface TutorialStep {
+  title: string;
+  body: string;
+}
+
+const TUTORIAL_STEPS: TutorialStep[] = [
+  {
+    title: "전투 방식 안내",
+    body: "이 게임의 전투는 키보드 타이핑으로 진행됩니다. 화면 아래 입력창에 표시된 문구를 정확히 입력하면 공격이나 스킬이 발동됩니다.",
+  },
+  {
+    title: "공격 / 스킬 입력",
+    body: "'문구를 입력하세요' 아래에 적힌 글자를 그대로 입력하세요. 한 글자씩 맞으면 초록색으로 표시됩니다. 다 입력하면 자동으로 스킬이 발동됩니다.",
+  },
+  {
+    title: "몬스터 공격 회피",
+    body: "몬스터가 공격을 준비하면 화면 위쪽에 경고와 타이머가 뜨고, 입력창의 문구가 '회피 문구'로 바뀝니다. 타이머가 다 되기 전에 입력을 마치면 피해를 피하거나 줄일 수 있습니다.",
+  },
+  {
+    title: "아이템 사용",
+    body: "전투 중에도 가방 🎒 아이콘을 눌러 포션 등을 사용할 수 있습니다. 체력이나 마나가 부족할 때 활용하세요.",
+  },
+  {
+    title: "도망치기",
+    body: "위험하다고 느껴지면 '🏃 도망치기' 버튼으로 전투를 즉시 포기하고 빠져나올 수 있습니다. 보상은 없지만 목숨은 지킬 수 있습니다.",
+  },
+];
+
+export function CombatScreen({
+  player,
+  monster,
+  startHp,
+  stats,
+  inventory,
+  onUseItem,
+  onResolved,
+  showTutorial,
+  onTutorialDone,
+}: Props) {
+  const [tutorialActive, setTutorialActive] = useState(!!showTutorial);
+  const [tutorialStep, setTutorialStep] = useState(0);
+
+  function handleTutorialNext() {
+    if (tutorialStep < TUTORIAL_STEPS.length - 1) {
+      setTutorialStep((s) => s + 1);
+    } else {
+      setTutorialActive(false);
+      onTutorialDone?.();
+    }
+  }
+
   const {
     playerHp,
     playerMaxHp,
@@ -44,7 +98,8 @@ export function CombatScreen({ player, monster, startHp, stats, inventory, onUse
     handleInputChange,
     applyHeal,
     applyManaRestore,
-  } = useCombat(player, monster, startHp, stats);
+    guardActive,
+  } = useCombat(player, monster, startHp, stats, tutorialActive);
 
   function handleUseItem(itemId: string) {
     const item = getConsumable(itemId);
@@ -66,6 +121,32 @@ export function CombatScreen({ player, monster, startHp, stats, inventory, onUse
 
   return (
     <div className="panel combat-screen">
+      {tutorialActive && (
+        <div className="tutorial-overlay">
+          <div className="tutorial-box">
+            <div className="tutorial-step-label">
+              튜토리얼 {tutorialStep + 1} / {TUTORIAL_STEPS.length}
+            </div>
+            <h3 className="tutorial-title">{TUTORIAL_STEPS[tutorialStep].title}</h3>
+            <p className="tutorial-body">{TUTORIAL_STEPS[tutorialStep].body}</p>
+            <div className="tutorial-actions">
+              <button
+                type="button"
+                className="btn-secondary tutorial-skip-btn"
+                onClick={() => {
+                  setTutorialActive(false);
+                  onTutorialDone?.();
+                }}
+              >
+                건너뛰기
+              </button>
+              <button type="button" className="btn-primary tutorial-next-btn" onClick={handleTutorialNext}>
+                {tutorialStep < TUTORIAL_STEPS.length - 1 ? "다음" : "전투 시작!"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div
         className={`battle-stage${monster.isBoss ? " boss" : ""}${
           shake === "small" ? " shake-small" : shake === "big" ? " shake-big" : ""
@@ -168,6 +249,8 @@ export function CombatScreen({ player, monster, startHp, stats, inventory, onUse
         </div>
       </div>
 
+      {guardActive && <div className="buff-banner">🛡️ 방어 태세 중! 받는 피해가 줄어듭니다</div>}
+
       {incoming && result === "ongoing" && (
         <div className="incoming-attack">
           <span className="label">⚠ {incoming.attack.telegraphText}</span>
@@ -199,10 +282,11 @@ export function CombatScreen({ player, monster, startHp, stats, inventory, onUse
             spellCheck={false}
             autoComplete="off"
             placeholder="위 문구를 그대로 입력하세요"
+            disabled={tutorialActive}
           />
           {!incoming && (
             <div className="skill-legend">
-              {player.job.skills.map((s) => (
+              {getUnlockedSkills(player.job, player.level).map((s) => (
                 <span key={s.id} className="skill-chip">
                   {s.name}: {s.inputPhrase}
                 </span>

@@ -56,6 +56,7 @@ export function ResumeScreen({ account, session, defaultServerUrl, onStart, onLo
     totalKills: saved.totalKills ?? 0,
     bossDefeatedIds: (saved.bossDefeatedIds ?? []) as PlayerCharacter["bossDefeatedIds"],
     achievements: saved.achievements ?? [],
+    hasSeenTutorial: saved.hasSeenTutorial ?? true,
   };
   const stats = computeStats(character);
   character.hp = typeof saved.hp === "number" ? Math.min(saved.hp, stats.maxHp) : stats.maxHp;

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useCoopCombat } from "../combat/useCoopCombat";
-import { diffPhrase } from "../combat/engine";
+import { diffPhrase, getUnlockedSkills } from "../combat/engine";
 import { CharacterSprite, MonsterSprite } from "../render/SpriteCanvas";
 import { HitBurst } from "./HitBurst";
 import { InventoryPanel } from "./InventoryPanel";
@@ -254,7 +254,7 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, inv
         />
         {!isTargeted && (
           <div className="skill-legend">
-            {player.job.skills.map((s) => (
+            {getUnlockedSkills(player.job, player.level).map((s) => (
               <span key={s.id} className="skill-chip">
                 {s.name}: {s.inputPhrase}
               </span>

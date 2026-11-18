@@ -45,19 +45,34 @@ export function pickRandom<T>(arr: T[], excludeId?: string): T {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+/** 레벨이 아직 해금 레벨에 도달하지 못한 스킬을 제외한, 현재 사용 가능한 스킬 목록. */
+export function getUnlockedSkills(job: JobDefinition, level: number): Skill[] {
+  const unlocked = job.skills.filter((s) => (s.unlockLevel ?? 1) <= level);
+  // 해금 레벨 설정 오류 등으로 하나도 없으면 최소한 기본 스킬은 항상 쓸 수 있게 한다.
+  return unlocked.length > 0 ? unlocked : job.skills.slice(0, 1);
+}
+
+/** 레벨업으로 oldLevel -> newLevel 사이에 새로 배우게 된 스킬 목록. */
+export function getNewlyUnlockedSkills(job: JobDefinition, oldLevel: number, newLevel: number): Skill[] {
+  if (newLevel <= oldLevel) return [];
+  return job.skills.filter((s) => (s.unlockLevel ?? 1) > oldLevel && (s.unlockLevel ?? 1) <= newLevel);
+}
+
 /**
- * 다음 스킬을 무작위로 고른다. availableMp를 넘기면 현재 마나로 쓸 수 있는
- * 스킬 중에서만 고르고, 하나도 감당할 수 없으면(마나 0에 가까운 상황) 그 중
- * 가장 적은 마나가 드는 스킬로 안전하게 대체한다 (직업마다 mpCost 0인 기본
- * 스킬이 하나씩 있으므로 실제로는 거의 발생하지 않는다).
+ * 다음 스킬을 무작위로 고른다. level을 넘기면 아직 배우지 않은(해금 레벨 미달)
+ * 스킬은 제외한다. availableMp를 넘기면 현재 마나로 쓸 수 있는 스킬 중에서만
+ * 고르고, 하나도 감당할 수 없으면(마나 0에 가까운 상황) 그 중 가장 적은 마나가
+ * 드는 스킬로 안전하게 대체한다 (직업마다 mpCost 0인 기본 스킬이 하나씩 있으므로
+ * 실제로는 거의 발생하지 않는다).
  */
-export function pickSkill(job: JobDefinition, excludeId?: string, availableMp?: number): Skill {
+export function pickSkill(job: JobDefinition, excludeId?: string, availableMp?: number, level?: number): Skill {
+  const pool = typeof level === "number" ? getUnlockedSkills(job, level) : job.skills;
   if (typeof availableMp === "number") {
-    const affordable = job.skills.filter((s) => s.mpCost <= availableMp);
+    const affordable = pool.filter((s) => s.mpCost <= availableMp);
     if (affordable.length > 0) return pickRandom(affordable, excludeId);
-    return [...job.skills].sort((a, b) => a.mpCost - b.mpCost)[0];
+    return [...pool].sort((a, b) => a.mpCost - b.mpCost)[0];
   }
-  return pickRandom(job.skills, excludeId);
+  return pickRandom(pool, excludeId);
 }
 
 export function pickAttack(monster: MonsterDefinition, excludeId?: string): MonsterAttack {
@@ -88,5 +103,5 @@ export function resolveSkillEffect(skill: Skill, atkBonus: number): ResolvedSkil
   if (effect === "partyHeal") {
     return { kind: "partyHeal", amount: skill.value ?? 0 };
   }
-  return { kind: "taunt", amount: 0, durationMs: 8000 };
+  return { kind: "taunt", amount: skill.value ?? 0.5, durationMs: 8000 };
 }

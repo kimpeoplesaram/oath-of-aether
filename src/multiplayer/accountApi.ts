@@ -18,6 +18,7 @@ export interface SavedCharacter {
   totalKills?: number;
   bossDefeatedIds?: string[];
   achievements?: string[];
+  hasSeenTutorial?: boolean;
 }
 
 export interface AccountPayload {
@@ -157,6 +158,7 @@ export function saveCharacter(
     totalKills?: number;
     bossDefeatedIds?: string[];
     achievements?: string[];
+    hasSeenTutorial?: boolean;
   }
 ) {
   return request<{ ok: boolean; character: SavedCharacter }>(apiBaseUrl, "/character/save", {

@@ -400,6 +400,7 @@ async function handleRegister(req, res) {
       totalKills: 0,
       bossDefeatedIds: [],
       achievements: [],
+      hasSeenTutorial: false,
     },
     guildId: null,
     createdAt: Date.now(),
@@ -460,6 +461,7 @@ async function handleSaveCharacter(req, res) {
     totalKills,
     bossDefeatedIds,
     achievements,
+    hasSeenTutorial,
   } = body;
   if (typeof level === "number") acc.character.level = level;
   if (typeof xp === "number") acc.character.xp = xp;
@@ -473,6 +475,7 @@ async function handleSaveCharacter(req, res) {
   if (typeof totalKills === "number") acc.character.totalKills = totalKills;
   if (Array.isArray(bossDefeatedIds)) acc.character.bossDefeatedIds = bossDefeatedIds;
   if (Array.isArray(achievements)) acc.character.achievements = achievements;
+  if (typeof hasSeenTutorial === "boolean") acc.character.hasSeenTutorial = hasSeenTutorial;
   persist();
 
   sendJson(res, 200, { ok: true, character: publicCharacter(acc) });
