@@ -271,7 +271,7 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, inv
       </div>
 
       <div className="log-panel">
-        {log.map((entry: (typeof log)[number]) => (
+        {[...log].reverse().map((entry: (typeof log)[number]) => (
           <div key={entry.id} className={`log-line ${entry.kind}`}>
             {entry.text}
           </div>
