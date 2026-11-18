@@ -10,14 +10,16 @@ export function xpToNextLevel(level: number): number {
 export function computeStats(player: PlayerCharacter): PlayerStats {
   const levelBonusHp = (player.level - 1) * 12;
   const levelBonusAtk = (player.level - 1) * 3;
+  const levelBonusMp = (player.level - 1) * 4;
 
   const weapon = getEquipment(player.equipment.weaponId);
   const armor = getEquipment(player.equipment.armorId);
 
   const maxHp = player.job.baseHp + levelBonusHp + (armor?.hpBonus ?? 0);
   const atk = player.job.baseAtk + levelBonusAtk + (weapon?.atkBonus ?? 0);
+  const maxMp = player.job.baseMp + levelBonusMp;
 
-  return { maxHp, atk };
+  return { maxHp, atk, maxMp };
 }
 
 export interface GainXpResult {

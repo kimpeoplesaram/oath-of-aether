@@ -3,9 +3,11 @@ import { useCoopCombat } from "../combat/useCoopCombat";
 import { diffPhrase } from "../combat/engine";
 import { CharacterSprite, MonsterSprite } from "../render/SpriteCanvas";
 import { HitBurst } from "./HitBurst";
+import { InventoryPanel } from "./InventoryPanel";
+import { getConsumable } from "../data/items";
 import { getMonster } from "../data/monsters";
 import type { MultiplayerApi } from "../multiplayer/useMultiplayer";
-import type { MonsterId, PlayerCharacter, PlayerStats } from "../types";
+import type { MonsterId, PlayerCharacter, PlayerInventory, PlayerStats } from "../types";
 
 const ROLE_LABEL: Record<string, string> = {
   warrior: "탱커",
@@ -22,10 +24,12 @@ interface Props {
   monsterId: MonsterId;
   player: PlayerCharacter;
   stats: PlayerStats;
+  inventory: PlayerInventory;
+  onUseItem: (itemId: string) => boolean;
   onLeave: () => void;
 }
 
-export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onLeave }: Props) {
+export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, inventory, onUseItem, onLeave }: Props) {
   const monster = getMonster(monsterId);
   const {
     enc,
@@ -34,6 +38,8 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
     buffActive,
     debuffActive,
     currentSkill,
+    mana,
+    manaMax,
     typed,
     activeTarget,
     timeRemainingRatio,
@@ -46,7 +52,17 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
     shake,
     critFlash,
     handleInputChange,
+    applyHeal,
+    applyManaRestore,
   } = useCoopCombat(mp, instanceId, monsterId, player, stats);
+
+  function handleUseItem(itemId: string) {
+    const item = getConsumable(itemId);
+    if (!item) return;
+    if (!onUseItem(itemId)) return;
+    if (item.kind === "hpPotion") applyHeal(item.restoreAmount);
+    else applyManaRestore(item.restoreAmount);
+  }
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -161,6 +177,16 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
             <span className="hud-hp-text">
               {p.hp}/{p.maxHp}
             </span>
+            {p.id === mp.selfId && (
+              <>
+                <div className="mp-bar-track small">
+                  <div className="mp-bar-fill" style={{ width: `${Math.max(0, (mana / manaMax) * 100)}%` }} />
+                </div>
+                <span className="mp-text">
+                  MP {Math.max(0, Math.round(mana))}/{manaMax}
+                </span>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -237,9 +263,12 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
         )}
       </div>
 
-      <button className="btn-secondary" style={{ alignSelf: "center" }} onClick={onLeave}>
-        전투 이탈
-      </button>
+      <div className="combat-inventory-row">
+        <InventoryPanel inventory={inventory} onUse={handleUseItem} manaUsable compact />
+        <button className="btn-secondary" style={{ alignSelf: "center" }} onClick={onLeave}>
+          전투 이탈
+        </button>
+      </div>
 
       <div className="log-panel">
         {log.map((entry: (typeof log)[number]) => (

@@ -12,6 +12,8 @@ import { JOB_QUESTS } from "./data/quests";
 import { DUNGEON_PORTALS, MONSTER_RESPAWN_MS, MONSTER_SPAWNS } from "./data/overworld";
 import { computeStats, gainXp, maybeEquip } from "./combat/growth";
 import { getEquipment } from "./data/equipment";
+import { GRADE_LABELS } from "./data/grades";
+import { getConsumable } from "./data/items";
 import type { CombatResult } from "./combat/useCombat";
 import { useMultiplayer } from "./multiplayer/useMultiplayer";
 import { logout as apiLogout, saveCharacter, type AccountPayload } from "./multiplayer/accountApi";
@@ -82,6 +84,7 @@ export function App() {
       hp: p.hp,
       questIndex: quest?.questIndex ?? questIndex,
       questKillCount: quest?.questKillCount ?? questKillCount,
+      inventory: p.inventory,
     }).catch(() => {
       /* 저장 실패는 조용히 무시 — 다음 기회에 다시 저장됨 */
     });
@@ -118,8 +121,26 @@ export function App() {
       const dropId = pool[Math.floor(Math.random() * pool.length)];
       const { player: afterEquip, equipped, itemName } = maybeEquip(updated, dropId);
       updated = afterEquip;
-      if (equipped) messages.push(`${itemName} 획득! 자동 장착`);
-      else if (monsterDef.isBoss) messages.push(`${itemName} 획득! (이미 더 좋은 장비 보유)`);
+      const gradeLabel = GRADE_LABELS[getEquipment(dropId)?.grade ?? "common"];
+      if (equipped) messages.push(`[${gradeLabel}] ${itemName} 획득! 자동 장착`);
+      else if (monsterDef.isBoss) messages.push(`[${gradeLabel}] ${itemName} 획득! (이미 더 좋은 장비 보유)`);
+    }
+
+    // 포션 드랍 (장비 드랍과 별개로 판정). 들판 몬스터는 가끔, 보스는 항상 더 좋은 포션을 떨군다.
+    const potionDrops: string[] = monsterDef.isBoss
+      ? ["potion_hp_large", "potion_mp_large"]
+      : [
+          ...(Math.random() < 0.4 ? ["potion_hp_small"] : []),
+          ...(Math.random() < 0.25 ? ["potion_mp_small"] : []),
+        ];
+    if (potionDrops.length > 0) {
+      const nextInventory = { ...updated.inventory };
+      for (const itemId of potionDrops) {
+        nextInventory[itemId] = (nextInventory[itemId] ?? 0) + 1;
+        const item = getConsumable(itemId);
+        if (item) messages.push(`[${GRADE_LABELS[item.grade]}] ${item.name} 획득!`);
+      }
+      updated = { ...updated, inventory: nextInventory };
     }
 
     const quest = JOB_QUESTS[base.job.id][questIndex];
@@ -185,6 +206,41 @@ export function App() {
       });
     },
   });
+
+  // 인벤토리에서 아이템 1개를 소모한다 (수량만 변경). 실제 체력/마나 회복 효과는
+  // 호출한 쪽(오버월드는 바로, 전투 중이면 useCombat/useCoopCombat)에서 적용한다.
+  function consumeInventoryItem(itemId: string): boolean {
+    if (!player) return false;
+    const count = player.inventory[itemId] ?? 0;
+    if (count <= 0) return false;
+    const nextInventory = { ...player.inventory, [itemId]: count - 1 };
+    if (nextInventory[itemId] <= 0) delete nextInventory[itemId];
+    const updated = { ...player, inventory: nextInventory };
+    setPlayer(updated);
+    persistCharacter(updated);
+    return true;
+  }
+
+  // 오버월드(전투 밖)에서 포션을 사용한다. 체력 포션만 의미가 있다 (마나는 전투 중에만 존재).
+  function handleUsePotionOverworld(itemId: string) {
+    if (!player) return;
+    const item = getConsumable(itemId);
+    if (!item) return;
+    if (item.kind === "manaPotion") {
+      showToast("마나 포션은 전투 중에만 사용할 수 있습니다.");
+      return;
+    }
+    if (!consumeInventoryItem(itemId)) return;
+    const stats = computeStats(player);
+    playSfx("heal");
+    setPlayer((p) => {
+      if (!p) return p;
+      const healed = { ...p, hp: Math.min(stats.maxHp, p.hp + item.restoreAmount) };
+      persistCharacter(healed);
+      return healed;
+    });
+    showToast(`${item.name} 사용! 체력 +${item.restoreAmount}`);
+  }
 
   function handleCreate(
     character: PlayerCharacter,
@@ -326,6 +382,7 @@ export function App() {
           onEncounter={handleEncounter}
           onPortalLocked={() => showToast("던전 입구가 잠겨 있습니다. 모든 퀘스트를 먼저 완료하세요.")}
           onExitToTitle={() => setScreen("title")}
+          onUseItem={handleUsePotionOverworld}
         />
       )}
 
@@ -335,6 +392,8 @@ export function App() {
           monster={getMonster(encounter.monsterId)}
           startHp={player.hp}
           stats={computeStats(player)}
+          inventory={player.inventory}
+          onUseItem={consumeInventoryItem}
           onResolved={handleResolvedSolo}
         />
       )}
@@ -346,6 +405,8 @@ export function App() {
           monsterId={encounter.monsterId}
           player={player}
           stats={computeStats(player)}
+          inventory={player.inventory}
+          onUseItem={consumeInventoryItem}
           onLeave={handleLeaveCoop}
         />
       )}

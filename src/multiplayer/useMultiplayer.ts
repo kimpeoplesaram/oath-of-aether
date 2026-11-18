@@ -244,7 +244,7 @@ export function useMultiplayer(join: JoinInfo | null, handlers: MultiplayerHandl
 
   function sendEncounterAction(
     instanceId: string,
-    kind: "damage" | "heal" | "buff" | "taunt" | "debuff" | "partyHeal",
+    kind: "damage" | "heal" | "buff" | "taunt" | "debuff" | "partyHeal" | "selfHeal",
     amount?: number,
     durationMs?: number
   ) {

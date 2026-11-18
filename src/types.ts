@@ -14,6 +14,8 @@ export interface Skill {
   effect?: SkillEffect;
   /** heal: 회복량, partyBuff: 피해량 증가 비율(0.3 = 30%), debuff: 몬스터 공격력 감소 비율, partyHeal: 파티 전원 회복량 */
   value?: number;
+  /** 스킬 사용에 필요한 마나(MP). 직업마다 하나씩 있는 "기본" 스킬은 0이라 마나가 없어도 항상 쓸 수 있다. */
+  mpCost: number;
 }
 
 export interface JobDefinition {
@@ -23,8 +25,12 @@ export interface JobDefinition {
   tagline: string;
   baseHp: number;
   baseAtk: number;
+  baseMp: number;
   skills: Skill[];
 }
+
+// ---------- 아이템 등급 ----------
+export type ItemGrade = "common" | "uncommon" | "rare" | "epic" | "legendary";
 
 export interface MonsterAttack {
   id: string;
@@ -58,12 +64,28 @@ export interface EquipmentItem {
   jobId?: JobId; // weapon은 특정 직업 전용, armor는 공용
   atkBonus?: number;
   hpBonus?: number;
+  grade: ItemGrade;
 }
 
 export interface PlayerEquipment {
   weaponId?: string;
   armorId?: string;
 }
+
+// ---------- 소비 아이템(포션) ----------
+export type ConsumableKind = "hpPotion" | "manaPotion";
+
+export interface ConsumableItem {
+  id: string;
+  name: string;
+  kind: ConsumableKind;
+  grade: ItemGrade;
+  description: string;
+  restoreAmount: number; // HP 또는 MP 회복량
+}
+
+/** 아이템 id -> 보유 개수 */
+export type PlayerInventory = Record<string, number>;
 
 export interface PlayerCharacter {
   name: string;
@@ -72,11 +94,13 @@ export interface PlayerCharacter {
   xp: number;
   hp: number; // 현재 체력 (오버월드/전투 간에 유지됨)
   equipment: PlayerEquipment;
+  inventory: PlayerInventory;
 }
 
 /** 레벨/장비를 반영한 실질 전투 스탯 */
 export interface PlayerStats {
   maxHp: number;
+  maxMp: number;
   atk: number;
 }
 

@@ -19,6 +19,9 @@ export function useCoopCombat(
   stats: PlayerStats
 ) {
   const [currentSkill, setCurrentSkill] = useState<Skill>(() => pickSkill(player.job));
+  const [mana, setMana] = useState(stats.maxMp);
+  const manaRef = useRef(mana);
+  manaRef.current = mana;
   const [typed, setTyped] = useState("");
   const [log, setLog] = useState<LogEntry[]>([]);
   const [now, setNow] = useState(() => Date.now());
@@ -67,11 +70,16 @@ export function useCoopCombat(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instanceId]);
 
-  // 타이머 UI 갱신(회피 제한시간 표시용)
+  // 타이머 UI 갱신(회피 제한시간 표시용) + 마나 자연 회복(최대치의 약 4%/초)
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 50);
+    const id = setInterval(() => {
+      setNow(Date.now());
+      if (manaRef.current < stats.maxMp) {
+        setMana((m: number) => Math.min(stats.maxMp, m + stats.maxMp * 0.04 * 0.05));
+      }
+    }, 50);
     return () => clearInterval(id);
-  }, []);
+  }, [stats.maxMp]);
 
   const enc = mp.encounterState && mp.encounterState.instanceId === instanceId ? mp.encounterState : null;
   const self = enc?.participants.find((p) => p.id === mp.selfId) ?? null;
@@ -195,7 +203,10 @@ export function useCoopCombat(
             mp.sendEncounterAction(instanceId, "taunt");
             pushLog(`${currentSkill.name}! 적의 시선을 끌었습니다.`, "hit");
           }
-          setCurrentSkill(pickSkill(player.job, currentSkill.id));
+          const manaAfterCast = Math.max(0, manaRef.current - currentSkill.mpCost);
+          setMana(manaAfterCast);
+          manaRef.current = manaAfterCast;
+          setCurrentSkill(pickSkill(player.job, currentSkill.id, manaAfterCast));
         }
         setTyped("");
       }
@@ -217,6 +228,31 @@ export function useCoopCombat(
       triggerShake,
       triggerFlash,
     ]
+  );
+
+  // 포션 사용: 인벤토리 차감은 상위(App.tsx)에서 처리한다. 체력 포션은 서버가
+  // 권위를 가진 내 체력에 "자기 자신만" 회복시키는 액션을 보내고, 마나 포션은
+  // (마나는 서버가 모르는 순수 클라이언트 자원이므로) 로컬 상태만 바로 올린다.
+  const applyHeal = useCallback(
+    (amount: number) => {
+      mp.sendEncounterAction(instanceId, "selfHeal", amount);
+      playSfx("heal");
+      pushPopup("player", `+${amount}`, "heal");
+      pushLog(`체력 물약 사용! 체력을 ${amount} 회복했습니다.`, "hit");
+    },
+    [mp, instanceId, pushPopup, pushLog]
+  );
+
+  const applyManaRestore = useCallback(
+    (amount: number) => {
+      const next = Math.min(stats.maxMp, manaRef.current + amount);
+      setMana(next);
+      manaRef.current = next;
+      playSfx("mana");
+      pushPopup("player", `+${amount} MP`, "buff");
+      pushLog(`마나 물약 사용! 마나를 ${amount} 회복했습니다.`, "hit");
+    },
+    [stats.maxMp, pushPopup, pushLog]
   );
 
   const timeRemainingRatio =
@@ -244,11 +280,15 @@ export function useCoopCombat(
     shake,
     critFlash,
     currentSkill,
+    mana,
+    manaMax: stats.maxMp,
     typed,
     activeTarget,
     timeRemainingRatio,
     secondsToNextAttack,
     log,
     handleInputChange,
+    applyHeal,
+    applyManaRestore,
   };
 }

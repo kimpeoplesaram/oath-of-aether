@@ -9,6 +9,7 @@ export type SfxKind =
   | "hitTaken"
   | "miss"
   | "heal"
+  | "mana"
   | "buff"
   | "debuff"
   | "victory"
@@ -169,6 +170,10 @@ export function playSfx(kind: SfxKind) {
     case "heal":
       tone(sfxGain, t, 440, 0.1, "sine", 0.18, 660);
       tone(sfxGain, t + 0.09, 660, 0.14, "sine", 0.16, 880);
+      break;
+    case "mana":
+      tone(sfxGain, t, 523, 0.09, "triangle", 0.16, 784);
+      tone(sfxGain, t + 0.08, 784, 0.12, "triangle", 0.14, 1046);
       break;
     case "buff":
       tone(sfxGain, t, 520, 0.08, "triangle", 0.16);

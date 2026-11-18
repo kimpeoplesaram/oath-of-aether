@@ -386,7 +386,16 @@ async function handleRegister(req, res) {
     username,
     passwordHash: hashPassword(password),
     token,
-    character: { name, jobId, level: 1, xp: 0, equipment: {}, questIndex: 0, questKillCount: 0 },
+    character: {
+      name,
+      jobId,
+      level: 1,
+      xp: 0,
+      equipment: {},
+      questIndex: 0,
+      questKillCount: 0,
+      inventory: { potion_hp_small: 3, potion_mp_small: 2 },
+    },
     guildId: null,
     createdAt: Date.now(),
   };
@@ -433,13 +442,14 @@ async function handleSaveCharacter(req, res) {
   if (!acc) return sendJson(res, 401, { error: "로그인이 필요합니다." });
   if (!acc.character) return sendJson(res, 400, { error: "캐릭터가 없습니다." });
 
-  const { level, xp, equipment, hp, questIndex, questKillCount } = body;
+  const { level, xp, equipment, hp, questIndex, questKillCount, inventory } = body;
   if (typeof level === "number") acc.character.level = level;
   if (typeof xp === "number") acc.character.xp = xp;
   if (equipment && typeof equipment === "object") acc.character.equipment = equipment;
   if (typeof hp === "number") acc.character.hp = hp;
   if (typeof questIndex === "number") acc.character.questIndex = questIndex;
   if (typeof questKillCount === "number") acc.character.questKillCount = questKillCount;
+  if (inventory && typeof inventory === "object") acc.character.inventory = inventory;
   persist();
 
   sendJson(res, 200, { ok: true, character: publicCharacter(acc) });
@@ -755,6 +765,10 @@ wss.on("connection", (ws) => {
           }
         }
         if (lowest) lowest.hp = Math.min(lowest.maxHp, lowest.hp + (msg.amount || 0));
+      } else if (msg.kind === "selfHeal") {
+        // 체력 포션처럼 "자기 자신만" 회복시키는 액션 (힐 스킬의 "가장 다친 아군" 대상 선정과 다름).
+        const self = enc.participants.get(meta.id);
+        if (self) self.hp = Math.min(self.maxHp, self.hp + (msg.amount || 0));
       } else if (msg.kind === "buff") {
         enc.partyBuffUntil = Date.now() + (msg.durationMs || 8000);
       } else if (msg.kind === "taunt") {

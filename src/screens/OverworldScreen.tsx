@@ -17,6 +17,7 @@ import {
 import type { RemotePlayer, ConnectionStatus, MultiplayerApi } from "../multiplayer/useMultiplayer";
 import type { MonsterId, PlayerCharacter, PlayerStats } from "../types";
 import { PartyPanel } from "./PartyPanel";
+import { InventoryPanel } from "./InventoryPanel";
 
 export interface QuestStatus {
   title: string;
@@ -41,6 +42,7 @@ interface Props {
   onEncounter: (instanceId: string, monsterId: MonsterId) => void;
   onPortalLocked: () => void;
   onExitToTitle: () => void;
+  onUseItem: (itemId: string) => void;
 }
 
 const MP_STATUS_LABEL: Record<string, string> = {
@@ -91,6 +93,7 @@ export function OverworldScreen({
   onEncounter,
   onPortalLocked,
   onExitToTitle,
+  onUseItem,
 }: Props) {
   const [pos, setPos] = useState({ x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2 });
   const [direction, setDirection] = useState<Direction>("down");
@@ -477,6 +480,10 @@ export function OverworldScreen({
         {multiplayerActive && mpStatus === "connected" && (
           <PartyPanel mp={mp} selfPlayer={player} selfStats={stats} remotePlayers={remotePlayers} />
         )}
+
+        <div className="inventory-panel-anchor">
+          <InventoryPanel inventory={player.inventory} onUse={onUseItem} manaUsable={false} />
+        </div>
 
         <div className="overworld-hint overlay-hint bottom-hint">
           방향키 또는 WASD로 이동 · 몬스터나 던전 입구에 가까이 가서 E키를 누르면 전투가 시작됩니다 · 쓰러뜨린 몬스터는 잠시 후 다시 나타납니다 · 보스는 모든 퀘스트를 완료해야 도전할 수 있습니다

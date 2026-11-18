@@ -10,6 +10,7 @@ export const JOBS: JobDefinition[] = [
     tagline: "최전선에서 적을 베어내는 근접 전투의 달인",
     baseHp: 140,
     baseAtk: 18,
+    baseMp: 40,
     skills: [
       {
         id: "warrior_slash",
@@ -17,6 +18,7 @@ export const JOBS: JobDefinition[] = [
         inputPhrase: "하나 둘 셋 베어라",
         damage: 22,
         description: "빠른 3연속 베기",
+        mpCost: 0,
       },
       {
         id: "warrior_break",
@@ -24,6 +26,7 @@ export const JOBS: JobDefinition[] = [
         inputPhrase: "대지를 가르는 일격",
         damage: 34,
         description: "강력한 일격으로 방어를 무너뜨린다",
+        mpCost: 15,
       },
       {
         id: "warrior_taunt",
@@ -32,6 +35,7 @@ export const JOBS: JobDefinition[] = [
         damage: 0,
         effect: "taunt",
         description: "[탱커] 몬스터의 다음 공격을 자신에게 집중시킨다 (협동 전투에서 효과)",
+        mpCost: 10,
       },
     ],
   },
@@ -42,6 +46,7 @@ export const JOBS: JobDefinition[] = [
     tagline: "빛의 힘으로 아군을 지키고 적을 정화하는 치유사",
     baseHp: 120,
     baseAtk: 14,
+    baseMp: 70,
     skills: [
       {
         id: "priest_smite",
@@ -49,6 +54,7 @@ export const JOBS: JobDefinition[] = [
         inputPhrase: "빛이여 심판하라",
         damage: 20,
         description: "신성한 빛으로 적을 응징한다",
+        mpCost: 0,
       },
       {
         id: "priest_purify",
@@ -56,6 +62,7 @@ export const JOBS: JobDefinition[] = [
         inputPhrase: "어둠을 정화하는 불꽃",
         damage: 30,
         description: "어둠의 존재에게 특히 강력하다",
+        mpCost: 15,
       },
       {
         id: "priest_heal",
@@ -65,6 +72,7 @@ export const JOBS: JobDefinition[] = [
         effect: "heal",
         value: 28,
         description: "[힐러] 가장 다친 아군(혼자일 땐 자신)의 체력을 회복시킨다",
+        mpCost: 20,
       },
     ],
   },
@@ -75,6 +83,7 @@ export const JOBS: JobDefinition[] = [
     tagline: "에테르를 다루어 압도적인 화력을 쏟아내는 술사",
     baseHp: 100,
     baseAtk: 24,
+    baseMp: 90,
     skills: [
       {
         id: "mage_bolt",
@@ -82,6 +91,7 @@ export const JOBS: JobDefinition[] = [
         inputPhrase: "에테르여 응축하라",
         damage: 26,
         description: "압축된 에테르 탄환을 발사한다",
+        mpCost: 0,
       },
       {
         id: "mage_meteor",
@@ -89,6 +99,7 @@ export const JOBS: JobDefinition[] = [
         inputPhrase: "하늘의 별이 떨어진다",
         damage: 40,
         description: "긴 영창이 필요하지만 강력한 광역 피해",
+        mpCost: 25,
       },
     ],
   },
@@ -99,6 +110,7 @@ export const JOBS: JobDefinition[] = [
     tagline: "정확한 사격으로 원거리에서 적을 제압하는 사수",
     baseHp: 110,
     baseAtk: 20,
+    baseMp: 55,
     skills: [
       {
         id: "archer_pin",
@@ -106,6 +118,7 @@ export const JOBS: JobDefinition[] = [
         inputPhrase: "바람을 가르는 화살",
         damage: 24,
         description: "적을 꿰뚫는 정밀 사격",
+        mpCost: 0,
       },
       {
         id: "archer_rain",
@@ -113,6 +126,7 @@ export const JOBS: JobDefinition[] = [
         inputPhrase: "하늘에서 쏟아지는 화살비",
         damage: 32,
         description: "넓은 범위에 화살을 퍼붓는다",
+        mpCost: 15,
       },
       {
         id: "archer_focus",
@@ -122,6 +136,7 @@ export const JOBS: JobDefinition[] = [
         effect: "partyBuff",
         value: 0.3,
         description: "[서포터] 일정 시간 파티 전체의 공격력을 30% 올린다",
+        mpCost: 20,
       },
     ],
   },
@@ -132,6 +147,7 @@ export const JOBS: JobDefinition[] = [
     tagline: "그림자 속에서 적의 급소를 노리는 민첩한 전사",
     baseHp: 105,
     baseAtk: 22,
+    baseMp: 50,
     skills: [
       {
         id: "rogue_strike",
@@ -139,6 +155,7 @@ export const JOBS: JobDefinition[] = [
         inputPhrase: "그림자 속에서 찌른다",
         damage: 28,
         description: "빠르고 정확한 일격",
+        mpCost: 0,
       },
       {
         id: "rogue_flurry",
@@ -146,6 +163,7 @@ export const JOBS: JobDefinition[] = [
         inputPhrase: "순식간에 베고 빠진다",
         damage: 36,
         description: "짧은 틈을 노려 강하게 베어낸다",
+        mpCost: 15,
       },
       {
         id: "rogue_weaken",
@@ -155,6 +173,7 @@ export const JOBS: JobDefinition[] = [
         effect: "debuff",
         value: 0.3,
         description: "[디버퍼] 일정 시간 몬스터의 공격력을 30% 낮춘다",
+        mpCost: 15,
       },
     ],
   },
@@ -165,6 +184,7 @@ export const JOBS: JobDefinition[] = [
     tagline: "노래와 선율로 파티 전체를 다독이는 음유시인",
     baseHp: 115,
     baseAtk: 16,
+    baseMp: 65,
     skills: [
       {
         id: "bard_strike",
@@ -172,6 +192,7 @@ export const JOBS: JobDefinition[] = [
         inputPhrase: "귀를 찢는 불협화음",
         damage: 18,
         description: "소리의 충격파로 적을 공격한다",
+        mpCost: 0,
       },
       {
         id: "bard_heal",
@@ -181,6 +202,7 @@ export const JOBS: JobDefinition[] = [
         effect: "partyHeal",
         value: 18,
         description: "[힐러-광역] 파티 전원의 체력을 소량 회복시킨다",
+        mpCost: 20,
       },
     ],
   },

@@ -3,20 +3,26 @@ import { useCombat, type CombatResult } from "../combat/useCombat";
 import { diffPhrase } from "../combat/engine";
 import { CharacterSprite, MonsterSprite } from "../render/SpriteCanvas";
 import { HitBurst } from "./HitBurst";
-import type { MonsterDefinition, PlayerCharacter, PlayerStats } from "../types";
+import { InventoryPanel } from "./InventoryPanel";
+import { getConsumable } from "../data/items";
+import type { MonsterDefinition, PlayerCharacter, PlayerInventory, PlayerStats } from "../types";
 
 interface Props {
   player: PlayerCharacter;
   monster: MonsterDefinition;
   startHp: number;
   stats: PlayerStats;
+  inventory: PlayerInventory;
+  onUseItem: (itemId: string) => boolean;
   onResolved: (result: CombatResult, finalHp: number) => void;
 }
 
-export function CombatScreen({ player, monster, startHp, stats, onResolved }: Props) {
+export function CombatScreen({ player, monster, startHp, stats, inventory, onUseItem, onResolved }: Props) {
   const {
     playerHp,
     playerMaxHp,
+    mana,
+    manaMax,
     monsterHp,
     monsterMaxHp,
     currentSkill,
@@ -36,7 +42,17 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
     critFlash,
     isEnraged,
     handleInputChange,
+    applyHeal,
+    applyManaRestore,
   } = useCombat(player, monster, startHp, stats);
+
+  function handleUseItem(itemId: string) {
+    const item = getConsumable(itemId);
+    if (!item) return;
+    if (!onUseItem(itemId)) return;
+    if (item.kind === "hpPotion") applyHeal(item.restoreAmount);
+    else applyManaRestore(item.restoreAmount);
+  }
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -125,6 +141,12 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
           <div className="hp-text">
             {Math.max(0, playerHp)} / {playerMaxHp}
           </div>
+          <div className="mp-bar-track">
+            <div className="mp-bar-fill" style={{ width: `${Math.max(0, (mana / manaMax) * 100)}%` }} />
+          </div>
+          <div className="mp-text">
+            MP {Math.max(0, Math.round(mana))} / {manaMax}
+          </div>
         </div>
 
         <div className="vs-mark">VS</div>
@@ -187,13 +209,16 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
               ))}
             </div>
           )}
-          <button
-            type="button"
-            className="btn-secondary flee-btn"
-            onClick={() => onResolved("flee", Math.max(0, playerHp))}
-          >
-            🏃 도망치기
-          </button>
+          <div className="combat-inventory-row">
+            <InventoryPanel inventory={inventory} onUse={handleUseItem} manaUsable compact />
+            <button
+              type="button"
+              className="btn-secondary flee-btn"
+              onClick={() => onResolved("flee", Math.max(0, playerHp))}
+            >
+              🏃 도망치기
+            </button>
+          </div>
         </div>
       )}
 

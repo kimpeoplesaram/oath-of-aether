@@ -32,6 +32,7 @@ export function useCombat(
   stats: PlayerStats
 ) {
   const [playerHp, setPlayerHp] = useState(startHp);
+  const [mana, setMana] = useState(stats.maxMp);
   const [monsterHp, setMonsterHp] = useState(monsterDef.hp);
   const [currentSkill, setCurrentSkill] = useState<Skill>(() => pickSkill(player.job));
   const [incoming, setIncoming] = useState<IncomingAttack | null>(null);
@@ -65,6 +66,8 @@ export function useCombat(
   incomingRef.current = incoming;
   const monsterHpRef = useRef(monsterHp);
   monsterHpRef.current = monsterHp;
+  const manaRef = useRef(mana);
+  manaRef.current = mana;
 
   // 보스는 체력이 30% 이하로 떨어지면 "분노"해서 공격 주기가 짧아진다. 일반
   // 몬스터전과 달리 보스전만 뒤로 갈수록 더 긴박해지도록 하기 위한 장치.
@@ -115,6 +118,11 @@ export function useCombat(
       const t = Date.now();
       setNow(t);
 
+      // 마나는 가만히 있어도 천천히 회복된다 (최대치의 약 4%/초).
+      if (manaRef.current < stats.maxMp) {
+        setMana((m: number) => Math.min(stats.maxMp, m + stats.maxMp * 0.04 * 0.05));
+      }
+
       if (!incomingRef.current && t >= nextAttackAtRef.current) {
         const attack = pickAttack(monsterDef);
         const startedAt = t;
@@ -144,7 +152,19 @@ export function useCombat(
       }
     }, 50);
     return () => clearInterval(id);
-  }, [result, monsterDef, pushLog, flash, triggerMonsterAnim, pushPopup, triggerBurst, triggerShake, triggerFlash, nextAttackInterval]);
+  }, [
+    result,
+    monsterDef,
+    pushLog,
+    flash,
+    triggerMonsterAnim,
+    pushPopup,
+    triggerBurst,
+    triggerShake,
+    triggerFlash,
+    nextAttackInterval,
+    stats.maxMp,
+  ]);
 
   // 승패 판정
   useEffect(() => {
@@ -262,7 +282,10 @@ export function useCombat(
           } else {
             pushLog(`${currentSkill.name}! 적의 시선을 끌었다.`, "hit");
           }
-          setCurrentSkill(pickSkill(player.job, currentSkill.id));
+          const manaAfterCast = Math.max(0, manaRef.current - currentSkill.mpCost);
+          setMana(manaAfterCast);
+          manaRef.current = manaAfterCast;
+          setCurrentSkill(pickSkill(player.job, currentSkill.id, manaAfterCast));
         }
         setTyped("");
       }
@@ -288,6 +311,32 @@ export function useCombat(
     ]
   );
 
+  // 포션 사용: 인벤토리 차감은 상위(App.tsx)에서 처리하고, 여기서는 전투 중인
+  // 체력/마나 상태에 회복 효과만 적용한다.
+  const applyHeal = useCallback(
+    (amount: number) => {
+      if (resultRef.current !== "ongoing") return;
+      setPlayerHp((hp: number) => Math.min(stats.maxHp, hp + amount));
+      playSfx("heal");
+      pushPopup("player", `+${amount}`, "heal");
+      pushLog(`체력 물약 사용! 체력을 ${amount} 회복했습니다.`, "hit");
+    },
+    [stats.maxHp, pushPopup, pushLog]
+  );
+
+  const applyManaRestore = useCallback(
+    (amount: number) => {
+      if (resultRef.current !== "ongoing") return;
+      const next = Math.min(stats.maxMp, manaRef.current + amount);
+      setMana(next);
+      manaRef.current = next;
+      playSfx("mana");
+      pushPopup("player", `+${amount} MP`, "buff");
+      pushLog(`마나 물약 사용! 마나를 ${amount} 회복했습니다.`, "hit");
+    },
+    [stats.maxMp, pushPopup, pushLog]
+  );
+
   const timeRemainingRatio = incoming
     ? Math.max(0, (incoming.deadlineAt - now) / (incoming.deadlineAt - incoming.startedAt))
     : 1;
@@ -301,6 +350,8 @@ export function useCombat(
   return {
     playerHp,
     playerMaxHp: stats.maxHp,
+    mana,
+    manaMax: stats.maxMp,
     monsterHp,
     monsterMaxHp: monsterDef.hp,
     currentSkill,
@@ -320,6 +371,8 @@ export function useCombat(
     critFlash,
     isEnraged,
     handleInputChange,
+    applyHeal,
+    applyManaRestore,
     buffActive: Date.now() < buffUntil,
     debuffActive: Date.now() < debuffUntil,
   };

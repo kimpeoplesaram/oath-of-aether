@@ -45,7 +45,18 @@ export function pickRandom<T>(arr: T[], excludeId?: string): T {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-export function pickSkill(job: JobDefinition, excludeId?: string): Skill {
+/**
+ * 다음 스킬을 무작위로 고른다. availableMp를 넘기면 현재 마나로 쓸 수 있는
+ * 스킬 중에서만 고르고, 하나도 감당할 수 없으면(마나 0에 가까운 상황) 그 중
+ * 가장 적은 마나가 드는 스킬로 안전하게 대체한다 (직업마다 mpCost 0인 기본
+ * 스킬이 하나씩 있으므로 실제로는 거의 발생하지 않는다).
+ */
+export function pickSkill(job: JobDefinition, excludeId?: string, availableMp?: number): Skill {
+  if (typeof availableMp === "number") {
+    const affordable = job.skills.filter((s) => s.mpCost <= availableMp);
+    if (affordable.length > 0) return pickRandom(affordable, excludeId);
+    return [...job.skills].sort((a, b) => a.mpCost - b.mpCost)[0];
+  }
   return pickRandom(job.skills, excludeId);
 }
 
