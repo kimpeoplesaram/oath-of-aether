@@ -4,7 +4,7 @@ import { getEquipment } from "../data/equipment";
 import { computeStats } from "../combat/growth";
 import type { MultiplayerJoinInput } from "./CharacterCreateScreen";
 import type { AccountPayload } from "../multiplayer/accountApi";
-import { normalizeServerUrl } from "../multiplayer/accountApi";
+import { randomRoomCode } from "../multiplayer/config";
 import type { AccountSession, PlayerCharacter } from "../types";
 import { GuildPanel } from "./GuildPanel";
 
@@ -17,17 +17,12 @@ interface Props {
   onGuildChanged: (guildId: string | null) => void;
 }
 
-function randomRoomCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
-  return code;
-}
+type CoopMode = "off" | "host" | "join";
 
 export function ResumeScreen({ account, session, defaultServerUrl, onStart, onLogout, onGuildChanged }: Props) {
-  const [coopEnabled, setCoopEnabled] = useState(false);
-  const [serverUrl, setServerUrl] = useState(defaultServerUrl);
-  const [room, setRoom] = useState(() => randomRoomCode());
+  const [coopMode, setCoopMode] = useState<CoopMode>("off");
+  const [hostRoom, setHostRoom] = useState(() => randomRoomCode());
+  const [joinRoom, setJoinRoom] = useState("");
 
   if (!account.character) {
     return (
@@ -58,8 +53,10 @@ export function ResumeScreen({ account, session, defaultServerUrl, onStart, onLo
 
   function handleStart() {
     const multiplayer =
-      coopEnabled && serverUrl.trim()
-        ? { serverUrl: normalizeServerUrl(serverUrl), room: room.trim().toUpperCase() }
+      coopMode === "host"
+        ? { serverUrl: defaultServerUrl, room: hostRoom }
+        : coopMode === "join" && joinRoom.trim()
+        ? { serverUrl: defaultServerUrl, room: joinRoom.trim().toUpperCase() }
         : null;
     onStart(character, multiplayer);
   }
@@ -86,30 +83,53 @@ export function ResumeScreen({ account, session, defaultServerUrl, onStart, onLo
       </div>
 
       <div className="coop-panel">
-        <label className="coop-toggle">
-          <input type="checkbox" checked={coopEnabled} onChange={(e: any) => setCoopEnabled(e.target.checked)} />
-          친구와 함께 플레이 (같은 서버 주소 + 방 코드를 공유하면 같은 오버월드에서 만납니다)
-        </label>
-        {coopEnabled && (
+        <div className="coop-mode-row">
+          <button
+            type="button"
+            className={`coop-mode-btn${coopMode === "off" ? " selected" : ""}`}
+            onClick={() => setCoopMode("off")}
+          >
+            혼자 플레이
+          </button>
+          <button
+            type="button"
+            className={`coop-mode-btn${coopMode === "host" ? " selected" : ""}`}
+            onClick={() => setCoopMode("host")}
+          >
+            방 만들기
+          </button>
+          <button
+            type="button"
+            className={`coop-mode-btn${coopMode === "join" ? " selected" : ""}`}
+            onClick={() => setCoopMode("join")}
+          >
+            친구 방 코드로 참가
+          </button>
+        </div>
+
+        {coopMode === "host" && (
           <div className="coop-fields">
-            <input
-              className="name-input"
-              placeholder="서버 주소"
-              value={serverUrl}
-              onChange={(e: any) => setServerUrl(e.target.value)}
-            />
-            <div className="coop-room-row">
-              <input
-                className="name-input mono"
-                placeholder="방 코드"
-                value={room}
-                maxLength={8}
-                onChange={(e: any) => setRoom(e.target.value.toUpperCase())}
-              />
-              <button type="button" className="btn-secondary" onClick={() => setRoom(randomRoomCode())}>
+            <div className="room-code-display">
+              <span>내 방 코드</span>
+              <strong>{hostRoom}</strong>
+              <button type="button" className="btn-secondary" onClick={() => setHostRoom(randomRoomCode())}>
                 코드 새로 만들기
               </button>
             </div>
+            <p className="coop-hint">이 코드를 친구에게 알려주세요.</p>
+          </div>
+        )}
+
+        {coopMode === "join" && (
+          <div className="coop-fields">
+            <input
+              className="name-input mono"
+              placeholder="친구가 알려준 방 코드"
+              value={joinRoom}
+              maxLength={8}
+              onChange={(e: any) => setJoinRoom(e.target.value.toUpperCase())}
+            />
+            <p className="coop-hint">친구가 방을 먼저 만든 뒤 알려준 코드를 입력하면 같은 방에 들어갑니다.</p>
           </div>
         )}
       </div>

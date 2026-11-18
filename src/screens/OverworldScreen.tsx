@@ -306,6 +306,17 @@ export function OverworldScreen({
             {mpStatus === "connected" && ` · ${remotePlayers.length + 1}명`}
           </span>
         )}
+        {multiplayerActive && mpStatus === "connected" && mp.room && (
+          <span className="room-code-badge" title="친구에게 이 코드를 알려주면 같은 방에 들어올 수 있습니다">
+            방 코드 <strong>{mp.room}</strong>
+            <span className="room-host-tag">
+              · 방장:{" "}
+              {mp.hostId === mp.selfId
+                ? "나"
+                : remotePlayers.find((rp) => rp.id === mp.hostId)?.name ?? "알 수 없음"}
+            </span>
+          </span>
+        )}
         <button className="btn-secondary" onClick={onExitToTitle}>
           타이틀로
         </button>

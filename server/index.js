@@ -86,6 +86,8 @@ function validGuildName(n) {
 
 /** @type {Map<string, Map<string, PlayerState>>} roomCode -> (playerId -> state) */
 const rooms = new Map();
+/** @type {Map<string, string>} roomCode -> 방을 가장 먼저 만든(또는 방장이 나간 뒤 이어받은) playerId */
+const roomHost = new Map();
 /** @type {Map<import('ws').WebSocket, { room: string, id: string, name: string, jobId: string }>} */
 const socketMeta = new Map();
 /** @type {Map<string, EncounterState>} key = `${room}::${instanceId}` */
@@ -119,7 +121,7 @@ function broadcastRoomState(code) {
   const room = rooms.get(code);
   if (!room) return;
   const players = Array.from(room.entries()).map(([id, state]) => ({ id, ...state }));
-  const payload = JSON.stringify({ type: "state", room: code, players });
+  const payload = JSON.stringify({ type: "state", room: code, players, hostId: roomHost.get(code) ?? null });
   for (const [sock, meta] of socketsInRoom(code)) {
     if (sock.readyState === sock.OPEN) sock.send(payload);
   }
@@ -627,12 +629,14 @@ wss.on("connection", (ws) => {
       const code = String(msg.room || "").trim().toUpperCase().slice(0, 8);
       if (!code) return send(ws, { type: "error", message: "방 코드가 필요합니다." });
 
+      const isNewRoom = !rooms.has(code);
       const room = getRoom(code);
       if (room.size >= MAX_PLAYERS_PER_ROOM) {
         return send(ws, { type: "error", message: "방 인원이 가득 찼습니다 (최대 6명)." });
       }
 
       const id = randomUUID();
+      if (isNewRoom) roomHost.set(code, id);
       const name = String(msg.name || "모험가").slice(0, 12);
       const jobId = msg.jobId || "warrior";
       room.set(id, {
@@ -853,8 +857,17 @@ wss.on("connection", (ws) => {
       const room = rooms.get(meta.room);
       if (room) {
         room.delete(meta.id);
-        if (room.size === 0) rooms.delete(meta.room);
-        else broadcastRoomState(meta.room);
+        if (room.size === 0) {
+          rooms.delete(meta.room);
+          roomHost.delete(meta.room);
+        } else {
+          // 방장이 나갔다면 남은 사람 중 한 명이 새 방장이 된다.
+          if (roomHost.get(meta.room) === meta.id) {
+            const [nextHostId] = room.keys();
+            roomHost.set(meta.room, nextHostId);
+          }
+          broadcastRoomState(meta.room);
+        }
       }
       for (const [key, enc] of encounters) {
         if (enc.room === meta.room && enc.participants.has(meta.id)) {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { JOBS } from "../data/jobs";
+import { DEFAULT_SERVER_URL, randomRoomCode } from "../multiplayer/config";
 import type { JobId, PlayerCharacter } from "../types";
 
 export interface MultiplayerJoinInput {
@@ -11,22 +12,17 @@ interface Props {
   onCreate: (character: PlayerCharacter, multiplayer: MultiplayerJoinInput | null) => void;
 }
 
-function randomRoomCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
-  return code;
-}
+type CoopMode = "off" | "host" | "join";
 
 export function CharacterCreateScreen({ onCreate }: Props) {
   const [name, setName] = useState("");
   const [jobId, setJobId] = useState<JobId>(JOBS[0].id);
-  const [coopEnabled, setCoopEnabled] = useState(false);
-  const [serverUrl, setServerUrl] = useState("");
-  const [room, setRoom] = useState(() => randomRoomCode());
+  const [coopMode, setCoopMode] = useState<CoopMode>("off");
+  const [hostRoom, setHostRoom] = useState(() => randomRoomCode());
+  const [joinRoom, setJoinRoom] = useState("");
 
   const selectedJob = JOBS.find((j) => j.id === jobId)!;
-  const canSubmit = name.trim().length > 0 && (!coopEnabled || serverUrl.trim().length > 0);
+  const canSubmit = name.trim().length > 0 && (coopMode !== "join" || joinRoom.trim().length > 0);
 
   function handleSubmit() {
     if (!canSubmit) return;
@@ -39,8 +35,10 @@ export function CharacterCreateScreen({ onCreate }: Props) {
       equipment: {},
     };
     const multiplayer =
-      coopEnabled && serverUrl.trim()
-        ? { serverUrl: serverUrl.trim(), room: room.trim().toUpperCase() }
+      coopMode === "host"
+        ? { serverUrl: DEFAULT_SERVER_URL, room: hostRoom }
+        : coopMode === "join" && joinRoom.trim()
+        ? { serverUrl: DEFAULT_SERVER_URL, room: joinRoom.trim().toUpperCase() }
         : null;
     onCreate(character, multiplayer);
   }
@@ -73,39 +71,53 @@ export function CharacterCreateScreen({ onCreate }: Props) {
       </div>
 
       <div className="coop-panel">
-        <label className="coop-toggle">
-          <input
-            type="checkbox"
-            checked={coopEnabled}
-            onChange={(e: any) => setCoopEnabled(e.target.checked)}
-          />
-          친구와 함께 플레이 (같은 서버 주소 + 방 코드를 공유하면 같은 오버월드에서 만납니다)
-        </label>
+        <div className="coop-mode-row">
+          <button
+            type="button"
+            className={`coop-mode-btn${coopMode === "off" ? " selected" : ""}`}
+            onClick={() => setCoopMode("off")}
+          >
+            혼자 플레이
+          </button>
+          <button
+            type="button"
+            className={`coop-mode-btn${coopMode === "host" ? " selected" : ""}`}
+            onClick={() => setCoopMode("host")}
+          >
+            방 만들기
+          </button>
+          <button
+            type="button"
+            className={`coop-mode-btn${coopMode === "join" ? " selected" : ""}`}
+            onClick={() => setCoopMode("join")}
+          >
+            친구 방 코드로 참가
+          </button>
+        </div>
 
-        {coopEnabled && (
+        {coopMode === "host" && (
           <div className="coop-fields">
-            <input
-              className="name-input"
-              placeholder="서버 주소 (예: wss://oath-of-aether-server.onrender.com)"
-              value={serverUrl}
-              onChange={(e: any) => setServerUrl(e.target.value)}
-            />
-            <div className="coop-room-row">
-              <input
-                className="name-input mono"
-                placeholder="방 코드"
-                value={room}
-                maxLength={8}
-                onChange={(e: any) => setRoom(e.target.value.toUpperCase())}
-              />
-              <button type="button" className="btn-secondary" onClick={() => setRoom(randomRoomCode())}>
+            <div className="room-code-display">
+              <span>내 방 코드</span>
+              <strong>{hostRoom}</strong>
+              <button type="button" className="btn-secondary" onClick={() => setHostRoom(randomRoomCode())}>
                 코드 새로 만들기
               </button>
             </div>
-            <p className="coop-hint">
-              이 서버 주소와 방 코드를 친구에게 그대로 알려주세요. 같은 값을 입력하면 같은 방에
-              들어옵니다.
-            </p>
+            <p className="coop-hint">이 코드를 친구에게 알려주세요. 서버 주소는 신경 쓰지 않아도 됩니다.</p>
+          </div>
+        )}
+
+        {coopMode === "join" && (
+          <div className="coop-fields">
+            <input
+              className="name-input mono"
+              placeholder="친구가 알려준 방 코드"
+              value={joinRoom}
+              maxLength={8}
+              onChange={(e: any) => setJoinRoom(e.target.value.toUpperCase())}
+            />
+            <p className="coop-hint">친구가 방을 먼저 만든 뒤 알려준 코드를 입력하면 같은 방에 들어갑니다.</p>
           </div>
         )}
       </div>

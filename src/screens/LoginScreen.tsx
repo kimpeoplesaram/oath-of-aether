@@ -2,6 +2,7 @@ import { useState } from "react";
 import { JOBS } from "../data/jobs";
 import { ApiError, login, register, wsUrlToHttp, normalizeServerUrl } from "../multiplayer/accountApi";
 import type { AccountPayload } from "../multiplayer/accountApi";
+import { DEFAULT_SERVER_URL } from "../multiplayer/config";
 import type { AccountSession, JobId } from "../types";
 
 interface Props {
@@ -10,14 +11,6 @@ interface Props {
 }
 
 type Tab = "login" | "register";
-
-// 배포된 공식 서버 주소. 로컬(localhost)에서 개발 중일 때는 로컬 서버를 기본값으로 쓴다.
-const PRODUCTION_SERVER_URL = "wss://oath-of-aether.onrender.com";
-const LOCAL_SERVER_URL = "ws://localhost:8787";
-const DEFAULT_SERVER_URL =
-  typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? LOCAL_SERVER_URL
-    : PRODUCTION_SERVER_URL;
 
 export function LoginScreen({ onLoggedIn, onBack }: Props) {
   const [tab, setTab] = useState<Tab>("login");

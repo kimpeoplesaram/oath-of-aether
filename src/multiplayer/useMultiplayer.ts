@@ -94,6 +94,7 @@ interface MultiplayerHandlers {
 export function useMultiplayer(join: JoinInfo | null, handlers: MultiplayerHandlers = {}) {
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const [selfId, setSelfId] = useState<string | null>(null);
+  const [hostId, setHostId] = useState<string | null>(null);
   const [remotePlayers, setRemotePlayers] = useState<RemotePlayer[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [encounterState, setEncounterState] = useState<EncounterState | null>(null);
@@ -141,6 +142,7 @@ export function useMultiplayer(join: JoinInfo | null, handlers: MultiplayerHandl
         } else if (msg.type === "state") {
           const others: RemotePlayer[] = msg.players.filter((p: RemotePlayer) => p.id !== selfIdRef.current);
           setRemotePlayers(others);
+          setHostId(msg.hostId ?? null);
         } else if (msg.type === "encounter_state") {
           setEncounterState(msg);
         } else if (msg.type === "encounter_ended") {
@@ -188,6 +190,7 @@ export function useMultiplayer(join: JoinInfo | null, handlers: MultiplayerHandl
       setPartyState(null);
       setPendingInvite(null);
       setPartyChat([]);
+      setHostId(null);
     };
     // join 객체는 호출부에서 변하지 않는 한 재연결하지 않는다
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -251,6 +254,8 @@ export function useMultiplayer(join: JoinInfo | null, handlers: MultiplayerHandl
   return {
     status,
     selfId,
+    hostId,
+    room: join?.room ?? null,
     remotePlayers,
     errorMessage,
     encounterState,
