@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { playSfx, startBgm, toggleMuted, unlockAudio, isMuted } from "./audio/engine";
 import { TitleScreen } from "./screens/TitleScreen";
 import { CharacterCreateScreen, type MultiplayerJoinInput } from "./screens/CharacterCreateScreen";
 import { LoginScreen } from "./screens/LoginScreen";
@@ -34,33 +35,74 @@ export function App() {
   const [accountSession, setAccountSession] = useState<AccountSession | null>(null);
   const [pendingAccount, setPendingAccount] = useState<AccountPayload | null>(null);
   const [pendingWsServerUrl, setPendingWsServerUrl] = useState("ws://localhost:8787");
+  const [muted, setMutedState] = useState(() => isMuted());
+
+  // 화면/전투 상황에 맞춰 배경음악(BGM)을 전환한다. 첫 사용자 클릭에서
+  // AudioContext 잠금을 풀기 위한 리스너도 여기서 같이 등록한다.
+  useEffect(() => {
+    const unlock = () => unlockAudio();
+    window.addEventListener("pointerdown", unlock, { once: false });
+    window.addEventListener("keydown", unlock, { once: false });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (screen === "combat" && encounter) {
+      const isBossFight = getMonster(encounter.monsterId).isBoss;
+      startBgm(isBossFight ? "boss" : "combat");
+    } else if (screen === "overworld") {
+      startBgm("overworld");
+    } else {
+      startBgm("title");
+    }
+  }, [screen, encounter]);
+
+  function handleToggleMute() {
+    const nowMuted = toggleMuted();
+    setMutedState(nowMuted);
+  }
 
   function showToast(text: string) {
     setToast(text);
     setTimeout(() => setToast((cur) => (cur === text ? null : cur)), 2800);
   }
 
-  // 로그인된 계정이면 레벨/경험치/장비/체력을 서버에 저장한다 (최선 노력, 실패해도 게임은 계속된다).
-  function persistCharacter(p: PlayerCharacter) {
+  // 로그인된 계정이면 레벨/경험치/장비/체력/퀘스트 진행도를 서버에 저장한다
+  // (최선 노력, 실패해도 게임은 계속된다). quest를 넘기지 않으면 현재 state
+  // 값을 그대로 사용한다 (패배 후 부활처럼 퀘스트 진행이 바뀌지 않은 경우).
+  function persistCharacter(p: PlayerCharacter, quest?: { questIndex: number; questKillCount: number }) {
     if (!accountSession) return;
     saveCharacter(accountSession.apiBaseUrl, accountSession.token, {
       level: p.level,
       xp: p.xp,
       equipment: p.equipment,
       hp: p.hp,
+      questIndex: quest?.questIndex ?? questIndex,
+      questKillCount: quest?.questKillCount ?? questKillCount,
     }).catch(() => {
       /* 저장 실패는 조용히 무시 — 다음 기회에 다시 저장됨 */
     });
   }
 
   // 몬스터 처치를 경험치/장비/퀘스트에 모두 반영하고, 메시지 배열을 돌려준다.
-  function applyVictoryRewards(base: PlayerCharacter, monsterId: MonsterId): { player: PlayerCharacter; messages: string[] } {
+  function applyVictoryRewards(
+    base: PlayerCharacter,
+    monsterId: MonsterId
+  ): { player: PlayerCharacter; messages: string[]; newQuestIndex: number; newQuestKillCount: number } {
     const monsterDef = getMonster(monsterId);
     const messages: string[] = [`${monsterDef.name} 처치! 경험치 +${monsterDef.xpReward}`];
+    let newQuestIndex = questIndex;
+    let newQuestKillCount = questKillCount;
 
     const { player: afterXp, leveledUp, levelsGained } = gainXp(base, monsterDef.xpReward);
     let updated = afterXp;
-    if (leveledUp) messages.push(`레벨 업! Lv.${updated.level} (+${levelsGained})`);
+    if (leveledUp) {
+      messages.push(`레벨 업! Lv.${updated.level} (+${levelsGained})`);
+      playSfx("levelUp");
+    }
 
     const dropChance = monsterDef.isBoss ? 1 : 0.5;
     if (monsterDef.lootTable.length > 0 && Math.random() < dropChance) {
@@ -90,15 +132,21 @@ export function App() {
         );
         updated = afterQuestXp;
         messages.push(`퀘스트 완료: ${quest.title}! 보너스 경험치 +${quest.rewardXp}`);
-        if (questLevelUp) messages.push(`레벨 업! Lv.${updated.level} (+${questLevels})`);
-        setQuestIndex((i) => i + 1);
+        if (questLevelUp) {
+          messages.push(`레벨 업! Lv.${updated.level} (+${questLevels})`);
+          playSfx("levelUp");
+        }
+        newQuestIndex = questIndex + 1;
+        newQuestKillCount = 0;
+        setQuestIndex(newQuestIndex);
         setQuestKillCount(0);
       } else {
+        newQuestKillCount = nextCount;
         setQuestKillCount(nextCount);
       }
     }
 
-    return { player: updated, messages };
+    return { player: updated, messages, newQuestIndex, newQuestKillCount };
   }
 
   const joinInfo =
@@ -116,11 +164,16 @@ export function App() {
         setPlayer((p) => {
           if (!p) return p;
           if (result === "victory") {
-            const { player: updated, messages } = applyVictoryRewards({ ...p, hp: yourHp }, cur.monsterId);
+            const { player: updated, messages, newQuestIndex, newQuestKillCount } = applyVictoryRewards(
+              { ...p, hp: yourHp },
+              cur.monsterId
+            );
+            playSfx("victory");
             showToast(messages.join("  ·  "));
-            persistCharacter(updated);
+            persistCharacter(updated, { questIndex: newQuestIndex, questKillCount: newQuestKillCount });
             return updated;
           }
+          playSfx("defeat");
           const stats = computeStats(p);
           showToast("쓰러졌지만 다시 일어났습니다. 체력을 회복했습니다.");
           const revived = { ...p, hp: stats.maxHp };
@@ -133,11 +186,15 @@ export function App() {
     },
   });
 
-  function handleCreate(character: PlayerCharacter, mpJoin: MultiplayerJoinInput | null) {
+  function handleCreate(
+    character: PlayerCharacter,
+    mpJoin: MultiplayerJoinInput | null,
+    resumeProgress?: { questIndex: number; questKillCount: number }
+  ) {
     setPlayer(character);
     setClearedInstanceIds([]);
-    setQuestIndex(0);
-    setQuestKillCount(0);
+    setQuestIndex(resumeProgress?.questIndex ?? 0);
+    setQuestKillCount(resumeProgress?.questKillCount ?? 0);
     setMultiplayer(mpJoin);
     setScreen("overworld");
   }
@@ -170,10 +227,13 @@ export function App() {
     if (!player || !encounter) return;
 
     if (result === "victory") {
-      const { player: updated, messages } = applyVictoryRewards({ ...player, hp: finalHp }, encounter.monsterId);
+      const { player: updated, messages, newQuestIndex, newQuestKillCount } = applyVictoryRewards(
+        { ...player, hp: finalHp },
+        encounter.monsterId
+      );
       showToast(messages.join("  ·  "));
       setPlayer(updated);
-      persistCharacter(updated);
+      persistCharacter(updated, { questIndex: newQuestIndex, questKillCount: newQuestKillCount });
       const instanceId = encounter.instanceId;
       setClearedInstanceIds((prev) => (prev.includes(instanceId) ? prev : [...prev, instanceId]));
       // 들판 몬스터(슬라임/고블린)는 일정 시간 뒤 다시 나타난다. 던전 보스는 포탈 자체가
@@ -183,6 +243,14 @@ export function App() {
           setClearedInstanceIds((prev) => prev.filter((id) => id !== instanceId));
         }, MONSTER_RESPAWN_MS);
       }
+    } else if (result === "flee") {
+      // 도망치기: 체력은 그대로(회복 없이) 유지한 채 전장에서 빠져나온다.
+      // 몬스터는 처치된 것으로 치지 않으므로 clearedInstanceIds에 추가하지 않는다.
+      playSfx("flee");
+      const fled = { ...player, hp: finalHp };
+      setPlayer(fled);
+      persistCharacter(fled);
+      showToast("전장에서 도망쳤습니다.");
     } else {
       const stats = computeStats(player);
       const revived = { ...player, hp: stats.maxHp };
@@ -197,6 +265,7 @@ export function App() {
 
   function handleLeaveCoop() {
     if (encounter) mp.leaveEncounter(encounter.instanceId);
+    playSfx("flee");
     setEncounter(null);
     setScreen("overworld");
   }
@@ -282,6 +351,15 @@ export function App() {
       )}
 
       {toast && <div className="toast">{toast}</div>}
+
+      <button
+        type="button"
+        className="sound-toggle-btn"
+        onClick={handleToggleMute}
+        title={muted ? "소리 켜기" : "소리 끄기"}
+      >
+        {muted ? "🔇" : "🔊"}
+      </button>
     </div>
   );
 }

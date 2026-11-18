@@ -12,7 +12,11 @@ interface Props {
   account: AccountPayload;
   session: AccountSession;
   defaultServerUrl: string;
-  onStart: (character: PlayerCharacter, multiplayer: MultiplayerJoinInput | null) => void;
+  onStart: (
+    character: PlayerCharacter,
+    multiplayer: MultiplayerJoinInput | null,
+    resumeProgress?: { questIndex: number; questKillCount: number }
+  ) => void;
   onLogout: () => void;
   onGuildChanged: (guildId: string | null) => void;
 }
@@ -58,7 +62,10 @@ export function ResumeScreen({ account, session, defaultServerUrl, onStart, onLo
         : coopMode === "join" && joinRoom.trim()
         ? { serverUrl: defaultServerUrl, room: joinRoom.trim().toUpperCase() }
         : null;
-    onStart(character, multiplayer);
+    onStart(character, multiplayer, {
+      questIndex: saved.questIndex ?? 0,
+      questKillCount: saved.questKillCount ?? 0,
+    });
   }
 
   return (

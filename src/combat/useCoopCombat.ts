@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { hasTypo, isPhraseComplete, pickSkill, resolveSkillEffect } from "./engine";
 import { rollCrit, useBattleEffects } from "./effects";
+import { playSfx } from "../audio/engine";
 import type { MultiplayerApi } from "../multiplayer/useMultiplayer";
 import type { LogEntry, PlayerCharacter, PlayerStats, Skill } from "../types";
 
@@ -84,6 +85,7 @@ export function useCoopCombat(
     }
     const prev = prevSelfHpRef.current;
     if (prev != null && self.hp < prev) {
+      playSfx("hitTaken");
       pushPopup("player", `-${prev - self.hp}`, "damage");
       triggerBurst("player", "hit");
       triggerShake("small");
@@ -106,6 +108,12 @@ export function useCoopCombat(
     prevPendingRef.current = pendingId;
   }, [enc?.pendingAttack, triggerMonsterAnim, triggerShake]);
 
+  // 브라우저에 따라 한글 조합이 끝났을 때 onChange와 onCompositionEnd가 같은
+  // 완성된 값에 대해 중복으로 호출되는 경우가 있다. 이미 처리한 값과 목표
+  // 문구가 그대로 반복되면 다시 처리하지 않도록 막아, 중복 판정으로 입력이
+  // 갑자기 초기화되거나 두 번 처리되는 문제를 방지한다.
+  const lastProcessedRef = useRef<{ value: string; target: string } | null>(null);
+
   const handleInputChange = useCallback(
     (value: string, isComposing?: boolean) => {
       const bounded = value.slice(0, activeTarget.length);
@@ -114,14 +122,26 @@ export function useCoopCombat(
       // 한글 조합 중에는 완성되지 않은 글자이므로 오타/완성 판정을 미룬다.
       if (isComposing) return;
 
+      if (
+        lastProcessedRef.current &&
+        lastProcessedRef.current.value === bounded &&
+        lastProcessedRef.current.target === activeTarget
+      ) {
+        return;
+      }
+      lastProcessedRef.current = { value: bounded, target: activeTarget };
+
       if (hasTypo(activeTarget, bounded)) {
         setTyped("");
+        lastProcessedRef.current = null;
         return;
       }
 
       if (isPhraseComplete(activeTarget, bounded)) {
+        lastProcessedRef.current = null;
         if (isTargeted) {
           mp.sendDodgeSuccess(instanceId);
+          playSfx("dodge");
           pushLog("공격을 회피했습니다!", "hit");
           pushPopup("player", "DODGE!", "dodge");
           triggerPlayerAnim("dodge");
@@ -132,12 +152,14 @@ export function useCoopCombat(
             // 몬스터도 일정 확률로 공격을 회피한다 (플레이어의 회피와 대칭되는 연출)
             if (Math.random() < 0.15) {
               triggerMonsterAnim("dodge");
+              playSfx("miss");
               pushPopup("monster", "MISS", "miss");
               pushLog("몬스터가 공격을 회피했습니다!", "miss");
             } else {
               const buffed = Math.round(effect.amount * (buffActive ? 1 + 0.3 : 1));
               const { amount: total, crit } = rollCrit(buffed);
               mp.sendEncounterAction(instanceId, "damage", total);
+              playSfx(crit ? "crit" : "attack");
               pushPopup("monster", `-${total}`, crit ? "crit" : "damage");
               triggerBurst("monster", crit ? "crit" : "hit");
               triggerShake(crit ? "big" : "small");
@@ -151,18 +173,22 @@ export function useCoopCombat(
             }
           } else if (effect.kind === "heal") {
             mp.sendEncounterAction(instanceId, "heal", effect.amount);
+            playSfx("heal");
             pushPopup("player", `+${effect.amount}`, "heal");
             pushLog(`${currentSkill.name}! 아군을 회복시켰습니다.`, "hit");
           } else if (effect.kind === "partyBuff") {
             mp.sendEncounterAction(instanceId, "buff", undefined, effect.durationMs);
+            playSfx("buff");
             pushPopup("player", "ATK UP", "buff");
             pushLog(`${currentSkill.name}! 파티 공격력이 상승했습니다.`, "hit");
           } else if (effect.kind === "debuff") {
             mp.sendEncounterAction(instanceId, "debuff", effect.amount, effect.durationMs);
+            playSfx("debuff");
             pushPopup("monster", "WEAKEN", "buff");
             pushLog(`${currentSkill.name}! 적의 공격력을 약화시켰습니다.`, "hit");
           } else if (effect.kind === "partyHeal") {
             mp.sendEncounterAction(instanceId, "partyHeal", effect.amount);
+            playSfx("heal");
             pushPopup("player", `+${effect.amount}`, "heal");
             pushLog(`${currentSkill.name}! 파티 전원을 회복시켰습니다.`, "hit");
           } else {

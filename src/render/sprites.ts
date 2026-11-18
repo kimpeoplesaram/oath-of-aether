@@ -152,17 +152,28 @@ export function drawCharacter(
     }
   }
 
-  // 다리 (걷기 2프레임: 좌우 다리가 번갈아 앞으로/뒤로 벌어지며 걷는 것처럼 보이게 함.
-  // 가만히 있을 때(frame 0)는 다리가 몸통 아래 가운데에 모여 있고, 걸을 때는
-  // 가로로도 벌어지고(scissor) 높이도 번갈아 바뀌어서 실제로 다리가 교차하는
-  // 느낌을 준다.
+  // 다리 (걷기 2프레임)
+  // 좌우(left/right)로 걸을 때는 옆에서 보는 모습이라 다리가 가로로 벌어지는
+  // scissor 효과가 자연스럽다. 하지만 위/아래(up/down, 즉 앞/뒤)로 걸을 때는
+  // 정면/후면에서 보는 모습이라 다리가 옆으로 벌어지면 이상하게 보이므로,
+  // 다리는 가운데에 그대로 두고 높이만 번갈아 바꿔 제자리걸음처럼 보이게 한다.
   const legColor = p.outline;
-  if (frame === 0) {
-    px(ctx, 5, 11, 2, 4, legColor);
-    px(ctx, 9, 11, 2, 5, legColor);
+  if (direction === "left" || direction === "right") {
+    if (frame === 0) {
+      px(ctx, 5, 11, 2, 4, legColor);
+      px(ctx, 9, 11, 2, 5, legColor);
+    } else {
+      px(ctx, 4, 11, 2, 5, legColor);
+      px(ctx, 10, 11, 2, 4, legColor);
+    }
   } else {
-    px(ctx, 4, 11, 2, 5, legColor);
-    px(ctx, 10, 11, 2, 4, legColor);
+    if (frame === 0) {
+      px(ctx, 5, 11, 2, 5, legColor);
+      px(ctx, 9, 11, 2, 4, legColor);
+    } else {
+      px(ctx, 5, 11, 2, 4, legColor);
+      px(ctx, 9, 11, 2, 5, legColor);
+    }
   }
 }
 

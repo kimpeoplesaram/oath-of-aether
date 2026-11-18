@@ -10,6 +10,8 @@ export interface SavedCharacter {
   xp: number;
   equipment: { weaponId?: string; armorId?: string };
   hp?: number;
+  questIndex?: number;
+  questKillCount?: number;
 }
 
 export interface AccountPayload {
@@ -136,7 +138,14 @@ export function logout(apiBaseUrl: string, token: string) {
 export function saveCharacter(
   apiBaseUrl: string,
   token: string,
-  data: { level: number; xp: number; equipment: { weaponId?: string; armorId?: string }; hp: number }
+  data: {
+    level: number;
+    xp: number;
+    equipment: { weaponId?: string; armorId?: string };
+    hp: number;
+    questIndex?: number;
+    questKillCount?: number;
+  }
 ) {
   return request<{ ok: boolean; character: SavedCharacter }>(apiBaseUrl, "/character/save", {
     token,

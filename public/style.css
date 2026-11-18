@@ -313,6 +313,15 @@ button {
   padding: 5px 12px;
 }
 
+.flee-btn {
+  display: block;
+  margin: 14px auto 0;
+  font-size: 0.78rem;
+  padding: 6px 16px;
+  opacity: 0.75;
+}
+.flee-btn:hover { opacity: 1; }
+
 .log-panel {
   background: #0d0f1b;
   border: 1px solid var(--border);
@@ -1349,3 +1358,24 @@ button {
   z-index: 50;
   animation: toastSlideUp 0.2s ease-out;
 }
+
+.sound-toggle-btn {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-panel-2);
+  color: var(--text-main);
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 60;
+  opacity: 0.8;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+}
+.sound-toggle-btn:hover { opacity: 1; }

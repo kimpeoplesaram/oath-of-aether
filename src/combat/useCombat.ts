@@ -9,8 +9,9 @@ import type {
 } from "../types";
 import { hasTypo, isPhraseComplete, pickAttack, pickSkill, resolveSkillEffect } from "./engine";
 import { rollCrit, useBattleEffects } from "./effects";
+import { playSfx } from "../audio/engine";
 
-export type CombatResult = "ongoing" | "victory" | "defeat";
+export type CombatResult = "ongoing" | "victory" | "defeat" | "flee";
 
 interface IncomingAttack {
   attack: MonsterAttack;
@@ -130,6 +131,7 @@ export function useCombat(
         setPlayerHp((hp: number) => Math.max(0, hp - dmg));
         flash("player");
         triggerMonsterAnim("attack");
+        playSfx("hitTaken");
         pushPopup("player", `-${dmg}`, "damage");
         triggerBurst("player", "hit");
         triggerShake(monsterDef.isBoss ? "big" : "small");
@@ -149,14 +151,22 @@ export function useCombat(
     if (result !== "ongoing") return;
     if (playerHp <= 0) {
       setResult("defeat");
+      playSfx("defeat");
       pushLog("쓰러졌습니다...", "system");
     } else if (monsterHp <= 0) {
       setResult("victory");
+      playSfx("victory");
       pushLog(`${monsterDef.name}을(를) 쓰러뜨렸습니다!`, "system");
     }
   }, [playerHp, monsterHp, result, monsterDef.name, pushLog]);
 
   const activeTarget = incoming ? incoming.attack.dodgePhrase : currentSkill.inputPhrase;
+
+  // 브라우저에 따라 한글 조합이 끝났을 때 onChange와 onCompositionEnd가 같은
+  // 완성된 값에 대해 중복으로 호출되는 경우가 있다. 이미 처리한 값과 목표
+  // 문구가 그대로 반복되면 다시 처리하지 않도록 막아, 중복 판정으로 입력이
+  // 갑자기 초기화되거나 두 번 처리되는 문제를 방지한다.
+  const lastProcessedRef = useRef<{ value: string; target: string } | null>(null);
 
   const handleInputChange = useCallback(
     (value: string, isComposing?: boolean) => {
@@ -171,16 +181,28 @@ export function useCombat(
       // 입력이 계속 초기화되는 것처럼 보인다.
       if (isComposing) return;
 
+      if (
+        lastProcessedRef.current &&
+        lastProcessedRef.current.value === bounded &&
+        lastProcessedRef.current.target === activeTarget
+      ) {
+        return;
+      }
+      lastProcessedRef.current = { value: bounded, target: activeTarget };
+
       if (hasTypo(activeTarget, bounded)) {
         // 오타 발생: 입력을 즉시 리셋해 다시 처음부터 입력하게 한다
         setTyped("");
+        lastProcessedRef.current = null;
         return;
       }
 
       if (isPhraseComplete(activeTarget, bounded)) {
+        lastProcessedRef.current = null;
         if (incomingRef.current) {
           pushLog(`"${incomingRef.current.attack.dodgePhrase}" 입력 성공! 공격을 회피했습니다.`, "hit");
           pushPopup("player", "DODGE!", "dodge");
+          playSfx("dodge");
           triggerPlayerAnim("dodge");
           setIncoming(null);
           incomingRef.current = null;
@@ -193,6 +215,7 @@ export function useCombat(
             // 몬스터도 일정 확률로 공격을 회피한다 (플레이어의 회피와 대칭되는 연출)
             if (Math.random() < 0.15) {
               triggerMonsterAnim("dodge");
+              playSfx("miss");
               pushPopup("monster", "MISS", "miss");
               pushLog(`${monsterDef.name}이(가) 공격을 회피했습니다!`, "miss");
             } else {
@@ -200,6 +223,7 @@ export function useCombat(
               const { amount: totalDamage, crit } = rollCrit(buffed);
               setMonsterHp((hp: number) => Math.max(0, hp - totalDamage));
               flash("monster");
+              playSfx(crit ? "crit" : "attack");
               pushPopup("monster", `-${totalDamage}`, crit ? "crit" : "damage");
               triggerBurst("monster", crit ? "crit" : "hit");
               triggerShake(crit ? "big" : "small");
@@ -213,11 +237,13 @@ export function useCombat(
             }
           } else if (effect.kind === "heal") {
             setPlayerHp((hp: number) => Math.min(stats.maxHp, hp + effect.amount));
+            playSfx("heal");
             pushPopup("player", `+${effect.amount}`, "heal");
             pushLog(`${currentSkill.name}! 체력을 ${effect.amount} 회복했습니다.`, "hit");
           } else if (effect.kind === "partyBuff") {
             setBuffUntil(Date.now() + (effect.durationMs ?? 8000));
             setBuffRatio(effect.amount);
+            playSfx("buff");
             pushPopup("player", "ATK UP", "buff");
             pushLog(`${currentSkill.name}! 공격력이 일시적으로 상승했습니다.`, "hit");
           } else if (effect.kind === "debuff") {
@@ -225,10 +251,12 @@ export function useCombat(
             debuffRef.current = { until, ratio: effect.amount };
             setDebuffUntil(until);
             setDebuffRatio(effect.amount);
+            playSfx("debuff");
             pushPopup("monster", "WEAKEN", "buff");
             pushLog(`${currentSkill.name}! 적의 공격력을 약화시켰습니다.`, "hit");
           } else if (effect.kind === "partyHeal") {
             setPlayerHp((hp: number) => Math.min(stats.maxHp, hp + effect.amount));
+            playSfx("heal");
             pushPopup("player", `+${effect.amount}`, "heal");
             pushLog(`${currentSkill.name}! 체력을 ${effect.amount} 회복했습니다.`, "hit");
           } else {

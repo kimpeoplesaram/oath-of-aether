@@ -386,7 +386,7 @@ async function handleRegister(req, res) {
     username,
     passwordHash: hashPassword(password),
     token,
-    character: { name, jobId, level: 1, xp: 0, equipment: {} },
+    character: { name, jobId, level: 1, xp: 0, equipment: {}, questIndex: 0, questKillCount: 0 },
     guildId: null,
     createdAt: Date.now(),
   };
@@ -433,11 +433,13 @@ async function handleSaveCharacter(req, res) {
   if (!acc) return sendJson(res, 401, { error: "로그인이 필요합니다." });
   if (!acc.character) return sendJson(res, 400, { error: "캐릭터가 없습니다." });
 
-  const { level, xp, equipment, hp } = body;
+  const { level, xp, equipment, hp, questIndex, questKillCount } = body;
   if (typeof level === "number") acc.character.level = level;
   if (typeof xp === "number") acc.character.xp = xp;
   if (equipment && typeof equipment === "object") acc.character.equipment = equipment;
   if (typeof hp === "number") acc.character.hp = hp;
+  if (typeof questIndex === "number") acc.character.questIndex = questIndex;
+  if (typeof questKillCount === "number") acc.character.questKillCount = questKillCount;
   persist();
 
   sendJson(res, 200, { ok: true, character: publicCharacter(acc) });

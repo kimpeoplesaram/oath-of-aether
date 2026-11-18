@@ -187,6 +187,13 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
               ))}
             </div>
           )}
+          <button
+            type="button"
+            className="btn-secondary flee-btn"
+            onClick={() => onResolved("flee", Math.max(0, playerHp))}
+          >
+            🏃 도망치기
+          </button>
         </div>
       )}
 
