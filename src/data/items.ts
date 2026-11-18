@@ -9,6 +9,7 @@ export const CONSUMABLES: ConsumableItem[] = [
     grade: "common",
     description: "체력을 40 회복한다.",
     restoreAmount: 40,
+    price: 15,
   },
   {
     id: "potion_hp_large",
@@ -17,6 +18,7 @@ export const CONSUMABLES: ConsumableItem[] = [
     grade: "uncommon",
     description: "체력을 90 회복한다.",
     restoreAmount: 90,
+    price: 35,
   },
   {
     id: "potion_mp_small",
@@ -25,6 +27,7 @@ export const CONSUMABLES: ConsumableItem[] = [
     grade: "common",
     description: "마나를 30 회복한다. (전투 중에만 사용 가능)",
     restoreAmount: 30,
+    price: 15,
   },
   {
     id: "potion_mp_large",
@@ -33,6 +36,7 @@ export const CONSUMABLES: ConsumableItem[] = [
     grade: "uncommon",
     description: "마나를 65 회복한다. (전투 중에만 사용 가능)",
     restoreAmount: 65,
+    price: 35,
   },
 ];
 
@@ -46,3 +50,6 @@ export const STARTER_INVENTORY: Record<string, number> = {
   potion_hp_small: 3,
   potion_mp_small: 2,
 };
+
+/** 캐릭터 생성 시 기본으로 지급하는 시작 골드. */
+export const STARTER_GOLD = 50;

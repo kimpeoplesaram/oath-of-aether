@@ -18,6 +18,7 @@ import type { RemotePlayer, ConnectionStatus, MultiplayerApi } from "../multipla
 import type { MonsterId, PlayerCharacter, PlayerStats } from "../types";
 import { PartyPanel } from "./PartyPanel";
 import { InventoryPanel } from "./InventoryPanel";
+import { ShopPanel } from "./ShopPanel";
 
 export interface QuestStatus {
   title: string;
@@ -43,6 +44,7 @@ interface Props {
   onPortalLocked: () => void;
   onExitToTitle: () => void;
   onUseItem: (itemId: string) => void;
+  onBuyItem: (itemId: string) => void;
 }
 
 const MP_STATUS_LABEL: Record<string, string> = {
@@ -94,6 +96,7 @@ export function OverworldScreen({
   onPortalLocked,
   onExitToTitle,
   onUseItem,
+  onBuyItem,
 }: Props) {
   const [pos, setPos] = useState({ x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2 });
   const [direction, setDirection] = useState<Direction>("down");
@@ -312,6 +315,7 @@ export function OverworldScreen({
             {player.job.icon} {player.name}
           </span>
           <span className="hud-level">Lv.{player.level}</span>
+          <span className="hud-gold">💰 {player.gold} G</span>
         </div>
         <div className="hud-hp">
           <div className="hp-bar-track small">
@@ -484,6 +488,8 @@ export function OverworldScreen({
         <div className="inventory-panel-anchor">
           <InventoryPanel inventory={player.inventory} onUse={onUseItem} manaUsable={false} />
         </div>
+
+        <ShopPanel gold={player.gold} onBuy={onBuyItem} />
 
         <div className="overworld-hint overlay-hint bottom-hint">
           방향키 또는 WASD로 이동 · 몬스터나 던전 입구에 가까이 가서 E키를 누르면 전투가 시작됩니다 · 쓰러뜨린 몬스터는 잠시 후 다시 나타납니다 · 보스는 모든 퀘스트를 완료해야 도전할 수 있습니다

@@ -85,6 +85,7 @@ export function App() {
       questIndex: quest?.questIndex ?? questIndex,
       questKillCount: quest?.questKillCount ?? questKillCount,
       inventory: p.inventory,
+      gold: p.gold,
     }).catch(() => {
       /* 저장 실패는 조용히 무시 — 다음 기회에 다시 저장됨 */
     });
@@ -142,6 +143,13 @@ export function App() {
       }
       updated = { ...updated, inventory: nextInventory };
     }
+
+    // 골드 획득: 들판 몬스터는 소액, 보스는 큰 액수를 떨군다.
+    const goldReward = monsterDef.isBoss
+      ? 30 + Math.floor(Math.random() * 31) // 30~60
+      : 3 + Math.floor(Math.random() * 6); // 3~8
+    updated = { ...updated, gold: updated.gold + goldReward };
+    messages.push(`골드 +${goldReward}`);
 
     const quest = JOB_QUESTS[base.job.id][questIndex];
     if (quest && (!quest.targetMonsterId || quest.targetMonsterId === monsterId)) {
@@ -240,6 +248,23 @@ export function App() {
       return healed;
     });
     showToast(`${item.name} 사용! 체력 +${item.restoreAmount}`);
+  }
+
+  // 상점에서 골드로 포션을 구매한다.
+  function handleBuyItem(itemId: string) {
+    if (!player) return;
+    const item = getConsumable(itemId);
+    if (!item) return;
+    if (player.gold < item.price) {
+      showToast("골드가 부족합니다.");
+      return;
+    }
+    const nextInventory = { ...player.inventory, [itemId]: (player.inventory[itemId] ?? 0) + 1 };
+    const updated = { ...player, gold: player.gold - item.price, inventory: nextInventory };
+    setPlayer(updated);
+    persistCharacter(updated);
+    playSfx("click");
+    showToast(`${item.name} 구매! (-${item.price} G)`);
   }
 
   function handleCreate(
@@ -383,6 +408,7 @@ export function App() {
           onPortalLocked={() => showToast("던전 입구가 잠겨 있습니다. 모든 퀘스트를 먼저 완료하세요.")}
           onExitToTitle={() => setScreen("title")}
           onUseItem={handleUsePotionOverworld}
+          onBuyItem={handleBuyItem}
         />
       )}
 

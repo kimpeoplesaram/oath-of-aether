@@ -13,6 +13,7 @@ export interface SavedCharacter {
   questIndex?: number;
   questKillCount?: number;
   inventory?: Record<string, number>;
+  gold?: number;
 }
 
 export interface AccountPayload {
@@ -147,6 +148,7 @@ export function saveCharacter(
     questIndex?: number;
     questKillCount?: number;
     inventory?: Record<string, number>;
+    gold?: number;
   }
 ) {
   return request<{ ok: boolean; character: SavedCharacter }>(apiBaseUrl, "/character/save", {

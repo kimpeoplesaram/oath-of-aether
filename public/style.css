@@ -721,6 +721,7 @@ button {
 .hud-left { display: flex; align-items: baseline; gap: 8px; min-width: 150px; }
 .hud-name { font-weight: 700; }
 .hud-level { color: var(--accent-gold); font-size: 0.85rem; }
+.hud-gold { color: #f0d060; font-size: 0.82rem; font-weight: 600; }
 
 .hud-hp { flex: 1; max-width: 260px; }
 .hp-bar-track.small { height: 10px; }
@@ -1043,6 +1044,73 @@ button {
   border: none;
   width: auto;
 }
+
+.shop-panel-anchor {
+  position: absolute;
+  top: 132px;
+  right: 20px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.shop-toggle-btn {
+  background: rgba(18,18,26,0.92);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--accent-gold);
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.shop-toggle-btn:hover { border-color: var(--accent-gold); }
+.shop-panel {
+  animation: fadeIn 0.25s ease-out;
+  margin-top: 8px;
+  width: 260px;
+  max-height: 60%;
+  background: rgba(18,18,26,0.92);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+}
+.shop-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-weight: 600;
+  color: var(--accent-gold);
+  border-bottom: 1px solid var(--border);
+}
+.shop-gold { color: #f0d060; white-space: nowrap; }
+.shop-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.shop-list {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+.shop-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.shop-item-info { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.shop-item-name { font-size: 0.78rem; }
+.shop-item-desc { color: var(--text-dim); font-size: 0.68rem; }
 .party-invite-banner {
   animation: fadeSlideUp 0.2s ease-out;
   background: rgba(212,175,106,0.12);

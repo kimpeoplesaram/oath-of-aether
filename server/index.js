@@ -395,6 +395,7 @@ async function handleRegister(req, res) {
       questIndex: 0,
       questKillCount: 0,
       inventory: { potion_hp_small: 3, potion_mp_small: 2 },
+      gold: 50,
     },
     guildId: null,
     createdAt: Date.now(),
@@ -442,7 +443,7 @@ async function handleSaveCharacter(req, res) {
   if (!acc) return sendJson(res, 401, { error: "로그인이 필요합니다." });
   if (!acc.character) return sendJson(res, 400, { error: "캐릭터가 없습니다." });
 
-  const { level, xp, equipment, hp, questIndex, questKillCount, inventory } = body;
+  const { level, xp, equipment, hp, questIndex, questKillCount, inventory, gold } = body;
   if (typeof level === "number") acc.character.level = level;
   if (typeof xp === "number") acc.character.xp = xp;
   if (equipment && typeof equipment === "object") acc.character.equipment = equipment;
@@ -450,6 +451,7 @@ async function handleSaveCharacter(req, res) {
   if (typeof questIndex === "number") acc.character.questIndex = questIndex;
   if (typeof questKillCount === "number") acc.character.questKillCount = questKillCount;
   if (inventory && typeof inventory === "object") acc.character.inventory = inventory;
+  if (typeof gold === "number") acc.character.gold = gold;
   persist();
 
   sendJson(res, 200, { ok: true, character: publicCharacter(acc) });

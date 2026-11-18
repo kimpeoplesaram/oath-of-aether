@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { getJob } from "../data/jobs";
 import { getEquipment } from "../data/equipment";
-import { STARTER_INVENTORY } from "../data/items";
+import { STARTER_GOLD, STARTER_INVENTORY } from "../data/items";
 import { computeStats } from "../combat/growth";
 import type { MultiplayerJoinInput } from "./CharacterCreateScreen";
 import type { AccountPayload } from "../multiplayer/accountApi";
@@ -50,6 +50,7 @@ export function ResumeScreen({ account, session, defaultServerUrl, onStart, onLo
     equipment: saved.equipment ?? {},
     hp: 0,
     inventory: saved.inventory ?? { ...STARTER_INVENTORY },
+    gold: typeof saved.gold === "number" ? saved.gold : STARTER_GOLD,
   };
   const stats = computeStats(character);
   character.hp = typeof saved.hp === "number" ? Math.min(saved.hp, stats.maxHp) : stats.maxHp;

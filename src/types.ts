@@ -82,6 +82,7 @@ export interface ConsumableItem {
   grade: ItemGrade;
   description: string;
   restoreAmount: number; // HP 또는 MP 회복량
+  price: number; // 상점 구매 가격 (골드)
 }
 
 /** 아이템 id -> 보유 개수 */
@@ -95,6 +96,7 @@ export interface PlayerCharacter {
   hp: number; // 현재 체력 (오버월드/전투 간에 유지됨)
   equipment: PlayerEquipment;
   inventory: PlayerInventory;
+  gold: number; // 상점에서 포션을 구매하는 데 쓰는 재화. 몬스터를 처치하면 조금씩 얻는다.
 }
 
 /** 레벨/장비를 반영한 실질 전투 스탯 */

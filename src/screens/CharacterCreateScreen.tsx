@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { JOBS } from "../data/jobs";
-import { STARTER_INVENTORY } from "../data/items";
+import { STARTER_GOLD, STARTER_INVENTORY } from "../data/items";
 import { DEFAULT_SERVER_URL, randomRoomCode } from "../multiplayer/config";
 import type { JobId, PlayerCharacter } from "../types";
 
@@ -35,6 +35,7 @@ export function CharacterCreateScreen({ onCreate }: Props) {
       hp: selectedJob.baseHp,
       equipment: {},
       inventory: { ...STARTER_INVENTORY },
+      gold: STARTER_GOLD,
     };
     const multiplayer =
       coopMode === "host"
