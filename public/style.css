@@ -1111,6 +1111,84 @@ button {
 .shop-item-info { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .shop-item-name { font-size: 0.78rem; }
 .shop-item-desc { color: var(--text-dim); font-size: 0.68rem; }
+
+.shop-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+.shop-tab-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  padding: 7px 0;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+.shop-tab-btn.active {
+  color: var(--accent-gold);
+  font-weight: 600;
+  border-bottom: 2px solid var(--accent-gold);
+}
+
+.achievements-panel-anchor {
+  position: absolute;
+  top: 184px;
+  right: 20px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.achievements-toggle-btn {
+  background: rgba(18,18,26,0.92);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--accent-gold);
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.achievements-toggle-btn:hover { border-color: var(--accent-gold); }
+.achievements-panel {
+  animation: fadeIn 0.25s ease-out;
+  margin-top: 8px;
+  width: 280px;
+  max-height: 60%;
+  background: rgba(18,18,26,0.92);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+}
+.achievements-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  font-weight: 600;
+  color: var(--accent-gold);
+  border-bottom: 1px solid var(--border);
+}
+.achievements-list {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+.achievement-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.achievement-row.locked { opacity: 0.45; }
+.achievement-icon { font-size: 1.1rem; }
+.achievement-info { display: flex; flex-direction: column; gap: 1px; }
+.achievement-name { font-size: 0.78rem; font-weight: 600; }
+.achievement-desc { color: var(--text-dim); font-size: 0.68rem; }
 .party-invite-banner {
   animation: fadeSlideUp 0.2s ease-out;
   background: rgba(212,175,106,0.12);

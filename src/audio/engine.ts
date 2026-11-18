@@ -16,6 +16,7 @@ export type SfxKind =
   | "defeat"
   | "flee"
   | "levelUp"
+  | "achievement"
   | "click"
   | "warn";
 
@@ -199,6 +200,12 @@ export function playSfx(kind: SfxKind) {
       tone(sfxGain, t + 0.09, 659, 0.1, "square", 0.2);
       tone(sfxGain, t + 0.18, 784, 0.1, "square", 0.2);
       tone(sfxGain, t + 0.27, 1046, 0.2, "square", 0.22);
+      break;
+    case "achievement":
+      tone(sfxGain, t, 659, 0.1, "triangle", 0.2);
+      tone(sfxGain, t + 0.1, 784, 0.1, "triangle", 0.2);
+      tone(sfxGain, t + 0.2, 988, 0.1, "triangle", 0.2);
+      tone(sfxGain, t + 0.3, 1318, 0.26, "triangle", 0.26);
       break;
     case "click":
       tone(sfxGain, t, 900, 0.03, "square", 0.1);

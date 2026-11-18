@@ -51,6 +51,10 @@ export function ResumeScreen({ account, session, defaultServerUrl, onStart, onLo
     hp: 0,
     inventory: saved.inventory ?? { ...STARTER_INVENTORY },
     gold: typeof saved.gold === "number" ? saved.gold : STARTER_GOLD,
+    equipmentInventory: saved.equipmentInventory ?? {},
+    totalKills: saved.totalKills ?? 0,
+    bossDefeatedIds: (saved.bossDefeatedIds ?? []) as PlayerCharacter["bossDefeatedIds"],
+    achievements: saved.achievements ?? [],
   };
   const stats = computeStats(character);
   character.hp = typeof saved.hp === "number" ? Math.min(saved.hp, stats.maxHp) : stats.maxHp;

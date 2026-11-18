@@ -36,6 +36,10 @@ export function CharacterCreateScreen({ onCreate }: Props) {
       equipment: {},
       inventory: { ...STARTER_INVENTORY },
       gold: STARTER_GOLD,
+      equipmentInventory: {},
+      totalKills: 0,
+      bossDefeatedIds: [],
+      achievements: [],
     };
     const multiplayer =
       coopMode === "host"

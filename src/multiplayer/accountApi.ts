@@ -14,6 +14,10 @@ export interface SavedCharacter {
   questKillCount?: number;
   inventory?: Record<string, number>;
   gold?: number;
+  equipmentInventory?: Record<string, number>;
+  totalKills?: number;
+  bossDefeatedIds?: string[];
+  achievements?: string[];
 }
 
 export interface AccountPayload {
@@ -149,6 +153,10 @@ export function saveCharacter(
     questKillCount?: number;
     inventory?: Record<string, number>;
     gold?: number;
+    equipmentInventory?: Record<string, number>;
+    totalKills?: number;
+    bossDefeatedIds?: string[];
+    achievements?: string[];
   }
 ) {
   return request<{ ok: boolean; character: SavedCharacter }>(apiBaseUrl, "/character/save", {

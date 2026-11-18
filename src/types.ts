@@ -97,6 +97,14 @@ export interface PlayerCharacter {
   equipment: PlayerEquipment;
   inventory: PlayerInventory;
   gold: number; // 상점에서 포션을 구매하는 데 쓰는 재화. 몬스터를 처치하면 조금씩 얻는다.
+  /** 장착하지 않은 여분의 장비(id -> 보유 개수). 상점에서 골드로 판매할 수 있다. */
+  equipmentInventory: PlayerInventory;
+  /** 누적 몬스터 처치 수 (업적 판정용). */
+  totalKills: number;
+  /** 한 번이라도 처치한 보스 몬스터 id 목록 (중복 없이). */
+  bossDefeatedIds: MonsterId[];
+  /** 달성한 업적 id 목록. */
+  achievements: string[];
 }
 
 /** 레벨/장비를 반영한 실질 전투 스탯 */

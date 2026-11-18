@@ -12,8 +12,9 @@ import { JOB_QUESTS } from "./data/quests";
 import { DUNGEON_PORTALS, MONSTER_RESPAWN_MS, MONSTER_SPAWNS } from "./data/overworld";
 import { computeStats, gainXp, maybeEquip } from "./combat/growth";
 import { getEquipment } from "./data/equipment";
-import { GRADE_LABELS } from "./data/grades";
+import { GRADE_LABELS, GRADE_SELL_PRICE } from "./data/grades";
 import { getConsumable } from "./data/items";
+import { ACHIEVEMENTS } from "./data/achievements";
 import type { CombatResult } from "./combat/useCombat";
 import { useMultiplayer } from "./multiplayer/useMultiplayer";
 import { logout as apiLogout, saveCharacter, type AccountPayload } from "./multiplayer/accountApi";
@@ -86,6 +87,10 @@ export function App() {
       questKillCount: quest?.questKillCount ?? questKillCount,
       inventory: p.inventory,
       gold: p.gold,
+      equipmentInventory: p.equipmentInventory,
+      totalKills: p.totalKills,
+      bossDefeatedIds: p.bossDefeatedIds,
+      achievements: p.achievements,
     }).catch(() => {
       /* 저장 실패는 조용히 무시 — 다음 기회에 다시 저장됨 */
     });
@@ -123,8 +128,15 @@ export function App() {
       const { player: afterEquip, equipped, itemName } = maybeEquip(updated, dropId);
       updated = afterEquip;
       const gradeLabel = GRADE_LABELS[getEquipment(dropId)?.grade ?? "common"];
-      if (equipped) messages.push(`[${gradeLabel}] ${itemName} 획득! 자동 장착`);
-      else if (monsterDef.isBoss) messages.push(`[${gradeLabel}] ${itemName} 획득! (이미 더 좋은 장비 보유)`);
+      if (equipped) {
+        messages.push(`[${gradeLabel}] ${itemName} 획득! 자동 장착`);
+      } else {
+        // 장착하지 않은 장비는 버리지 않고 보관함에 넣어 상점에서 팔 수 있게 한다.
+        const nextEquipmentInventory = { ...updated.equipmentInventory };
+        nextEquipmentInventory[dropId] = (nextEquipmentInventory[dropId] ?? 0) + 1;
+        updated = { ...updated, equipmentInventory: nextEquipmentInventory };
+        messages.push(`[${gradeLabel}] ${itemName} 획득! (보관함에 보관됨)`);
+      }
     }
 
     // 포션 드랍 (장비 드랍과 별개로 판정). 들판 몬스터는 가끔, 보스는 항상 더 좋은 포션을 떨군다.
@@ -151,6 +163,12 @@ export function App() {
     updated = { ...updated, gold: updated.gold + goldReward };
     messages.push(`골드 +${goldReward}`);
 
+    // 처치 수 누적 및 보스 처치 기록 (업적 판정용).
+    const bossDefeatedIds = monsterDef.isBoss && !updated.bossDefeatedIds.includes(monsterId)
+      ? [...updated.bossDefeatedIds, monsterId]
+      : updated.bossDefeatedIds;
+    updated = { ...updated, totalKills: updated.totalKills + 1, bossDefeatedIds };
+
     const quest = JOB_QUESTS[base.job.id][questIndex];
     if (quest && (!quest.targetMonsterId || quest.targetMonsterId === monsterId)) {
       const nextCount = questKillCount + 1;
@@ -173,6 +191,24 @@ export function App() {
         newQuestKillCount = nextCount;
         setQuestKillCount(nextCount);
       }
+    }
+
+    // 업적 판정: 아직 달성하지 못한 업적 중 조건을 만족한 것을 모두 달성 처리한다.
+    const ctx = {
+      level: updated.level,
+      totalKills: updated.totalKills,
+      bossDefeatedCount: updated.bossDefeatedIds.length,
+      gold: updated.gold,
+    };
+    const newlyUnlocked = ACHIEVEMENTS.filter(
+      (a) => !updated.achievements.includes(a.id) && a.condition(ctx)
+    );
+    if (newlyUnlocked.length > 0) {
+      updated = { ...updated, achievements: [...updated.achievements, ...newlyUnlocked.map((a) => a.id)] };
+      for (const a of newlyUnlocked) {
+        messages.push(`🏆 업적 달성: ${a.name}`);
+      }
+      playSfx("achievement");
     }
 
     return { player: updated, messages, newQuestIndex, newQuestKillCount };
@@ -265,6 +301,23 @@ export function App() {
     persistCharacter(updated);
     playSfx("click");
     showToast(`${item.name} 구매! (-${item.price} G)`);
+  }
+
+  // 보관함의 여분 장비를 상점에 팔아 골드로 바꾼다.
+  function handleSellEquipment(itemId: string) {
+    if (!player) return;
+    const count = player.equipmentInventory[itemId] ?? 0;
+    if (count <= 0) return;
+    const item = getEquipment(itemId);
+    if (!item) return;
+    const price = GRADE_SELL_PRICE[item.grade];
+    const nextEquipmentInventory = { ...player.equipmentInventory, [itemId]: count - 1 };
+    if (nextEquipmentInventory[itemId] <= 0) delete nextEquipmentInventory[itemId];
+    const updated = { ...player, gold: player.gold + price, equipmentInventory: nextEquipmentInventory };
+    setPlayer(updated);
+    persistCharacter(updated);
+    playSfx("click");
+    showToast(`${item.name} 판매! (+${price} G)`);
   }
 
   function handleCreate(
@@ -409,6 +462,7 @@ export function App() {
           onExitToTitle={() => setScreen("title")}
           onUseItem={handleUsePotionOverworld}
           onBuyItem={handleBuyItem}
+          onSellEquipment={handleSellEquipment}
         />
       )}
 

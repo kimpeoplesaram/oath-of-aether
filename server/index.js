@@ -396,6 +396,10 @@ async function handleRegister(req, res) {
       questKillCount: 0,
       inventory: { potion_hp_small: 3, potion_mp_small: 2 },
       gold: 50,
+      equipmentInventory: {},
+      totalKills: 0,
+      bossDefeatedIds: [],
+      achievements: [],
     },
     guildId: null,
     createdAt: Date.now(),
@@ -443,7 +447,20 @@ async function handleSaveCharacter(req, res) {
   if (!acc) return sendJson(res, 401, { error: "로그인이 필요합니다." });
   if (!acc.character) return sendJson(res, 400, { error: "캐릭터가 없습니다." });
 
-  const { level, xp, equipment, hp, questIndex, questKillCount, inventory, gold } = body;
+  const {
+    level,
+    xp,
+    equipment,
+    hp,
+    questIndex,
+    questKillCount,
+    inventory,
+    gold,
+    equipmentInventory,
+    totalKills,
+    bossDefeatedIds,
+    achievements,
+  } = body;
   if (typeof level === "number") acc.character.level = level;
   if (typeof xp === "number") acc.character.xp = xp;
   if (equipment && typeof equipment === "object") acc.character.equipment = equipment;
@@ -452,6 +469,10 @@ async function handleSaveCharacter(req, res) {
   if (typeof questKillCount === "number") acc.character.questKillCount = questKillCount;
   if (inventory && typeof inventory === "object") acc.character.inventory = inventory;
   if (typeof gold === "number") acc.character.gold = gold;
+  if (equipmentInventory && typeof equipmentInventory === "object") acc.character.equipmentInventory = equipmentInventory;
+  if (typeof totalKills === "number") acc.character.totalKills = totalKills;
+  if (Array.isArray(bossDefeatedIds)) acc.character.bossDefeatedIds = bossDefeatedIds;
+  if (Array.isArray(achievements)) acc.character.achievements = achievements;
   persist();
 
   sendJson(res, 200, { ok: true, character: publicCharacter(acc) });

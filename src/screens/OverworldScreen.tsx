@@ -19,6 +19,7 @@ import type { MonsterId, PlayerCharacter, PlayerStats } from "../types";
 import { PartyPanel } from "./PartyPanel";
 import { InventoryPanel } from "./InventoryPanel";
 import { ShopPanel } from "./ShopPanel";
+import { AchievementsPanel } from "./AchievementsPanel";
 
 export interface QuestStatus {
   title: string;
@@ -45,6 +46,7 @@ interface Props {
   onExitToTitle: () => void;
   onUseItem: (itemId: string) => void;
   onBuyItem: (itemId: string) => void;
+  onSellEquipment: (itemId: string) => void;
 }
 
 const MP_STATUS_LABEL: Record<string, string> = {
@@ -97,6 +99,7 @@ export function OverworldScreen({
   onExitToTitle,
   onUseItem,
   onBuyItem,
+  onSellEquipment,
 }: Props) {
   const [pos, setPos] = useState({ x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2 });
   const [direction, setDirection] = useState<Direction>("down");
@@ -489,7 +492,14 @@ export function OverworldScreen({
           <InventoryPanel inventory={player.inventory} onUse={onUseItem} manaUsable={false} />
         </div>
 
-        <ShopPanel gold={player.gold} onBuy={onBuyItem} />
+        <ShopPanel
+          gold={player.gold}
+          onBuy={onBuyItem}
+          equipmentInventory={player.equipmentInventory}
+          onSellEquipment={onSellEquipment}
+        />
+
+        <AchievementsPanel achievements={player.achievements} />
 
         <div className="overworld-hint overlay-hint bottom-hint">
           방향키 또는 WASD로 이동 · 몬스터나 던전 입구에 가까이 가서 E키를 누르면 전투가 시작됩니다 · 쓰러뜨린 몬스터는 잠시 후 다시 나타납니다 · 보스는 모든 퀘스트를 완료해야 도전할 수 있습니다
