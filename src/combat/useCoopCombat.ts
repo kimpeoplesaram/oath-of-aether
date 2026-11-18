@@ -198,6 +198,13 @@ export function useCoopCombat(
       ? Math.max(0, (enc.pendingAttack.deadlineAt - now) / enc.pendingAttack.windupMs)
       : 1;
 
+  // 몬스터가 아직 공격을 시작하지 않았을 때, 몇 초 뒤 공격이 시작될지 파티 전원에게
+  // 미리 보여주는 카운트다운(누가 타겟이 될지는 그 순간에 정해지므로 전원 공통으로 보여준다).
+  const secondsToNextAttack =
+    enc && !enc.pendingAttack && enc.nextAttackAt
+      ? Math.max(0, Math.ceil((enc.nextAttackAt - now) / 1000))
+      : null;
+
   return {
     enc,
     self,
@@ -214,6 +221,7 @@ export function useCoopCombat(
     typed,
     activeTarget,
     timeRemainingRatio,
+    secondsToNextAttack,
     log,
     handleInputChange,
   };

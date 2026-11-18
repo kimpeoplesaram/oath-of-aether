@@ -324,6 +324,28 @@ button {
   color: var(--text-dim);
 }
 .log-panel .log-line { margin: 2px 0; }
+
+/* 몬스터 공격이 몇 초 뒤 시작되는지 화면 오른쪽 아래에 작게 미리 알려주는 경고.
+   회피 문구를 입력해야 하는 순간(incoming-attack)이 뜨기 전까지, 마음의 준비를
+   할 수 있게 "N초 뒤 OOO 공격!"을 보여준다. */
+.attack-warning {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 40;
+  font-size: 0.74rem;
+  color: var(--accent-gold);
+  background: rgba(10,11,20,0.82);
+  border: 1px solid var(--accent-gold);
+  border-radius: 8px;
+  padding: 4px 10px;
+  pointer-events: none;
+  animation: attack-warning-pulse 0.5s ease-in-out infinite;
+}
+@keyframes attack-warning-pulse {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
 .log-line.hit { color: var(--ok); }
 .log-line.miss { color: var(--danger); }
 .log-line.system { color: var(--accent-gold); }

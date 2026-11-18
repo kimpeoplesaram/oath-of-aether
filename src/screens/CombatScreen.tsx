@@ -24,6 +24,7 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
     typed,
     activeTarget,
     timeRemainingRatio,
+    secondsToNextAttack,
     log,
     result,
     lastHitFlash,
@@ -203,6 +204,12 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
           </div>
         ))}
       </div>
+
+      {result === "ongoing" && secondsToNextAttack !== null && secondsToNextAttack <= 3 && (
+        <div className="attack-warning">
+          {secondsToNextAttack}초 뒤 {monster.name} 공격!
+        </div>
+      )}
     </div>
   );
 }

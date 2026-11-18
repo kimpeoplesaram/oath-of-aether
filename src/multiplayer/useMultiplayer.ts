@@ -65,6 +65,8 @@ export interface EncounterState {
   pendingAttack: PendingAttackInfo | null;
   partyBuffUntil: number;
   monsterDebuffUntil?: number;
+  /** pendingAttack이 없을 때 다음 공격이 시작될 예정 시각 (없으면 null) */
+  nextAttackAt?: number | null;
 }
 
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";

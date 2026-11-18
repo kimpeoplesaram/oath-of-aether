@@ -152,14 +152,17 @@ export function drawCharacter(
     }
   }
 
-  // 다리 (걷기 2프레임: 앞/뒤로 번갈아)
+  // 다리 (걷기 2프레임: 좌우 다리가 번갈아 앞으로/뒤로 벌어지며 걷는 것처럼 보이게 함.
+  // 가만히 있을 때(frame 0)는 다리가 몸통 아래 가운데에 모여 있고, 걸을 때는
+  // 가로로도 벌어지고(scissor) 높이도 번갈아 바뀌어서 실제로 다리가 교차하는
+  // 느낌을 준다.
   const legColor = p.outline;
   if (frame === 0) {
     px(ctx, 5, 11, 2, 4, legColor);
     px(ctx, 9, 11, 2, 5, legColor);
   } else {
-    px(ctx, 5, 11, 2, 5, legColor);
-    px(ctx, 9, 11, 2, 4, legColor);
+    px(ctx, 4, 11, 2, 5, legColor);
+    px(ctx, 10, 11, 2, 4, legColor);
   }
 }
 

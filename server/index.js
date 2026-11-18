@@ -156,6 +156,9 @@ function broadcastEncounter(key) {
       : null,
     partyBuffUntil: enc.partyBuffUntil,
     monsterDebuffUntil: enc.monsterDebuffUntil,
+    // pendingAttack이 아직 없을 때, 클라이언트가 "N초 뒤 공격!" 같은 예고 표시를
+    // 미리 보여줄 수 있도록 다음 공격 예정 시각도 함께 보낸다.
+    nextAttackAt: enc.pendingAttack ? null : enc.nextAttackAt,
   };
   const json = JSON.stringify(payload);
   for (const id of enc.participants.keys()) {

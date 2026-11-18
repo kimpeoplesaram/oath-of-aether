@@ -253,6 +253,12 @@ export function useCombat(
     ? Math.max(0, (incoming.deadlineAt - now) / (incoming.deadlineAt - incoming.startedAt))
     : 1;
 
+  // 공격 예고(incoming)가 뜨기 전, 몇 초 뒤에 몬스터가 공격할지 미리 보여주는 카운트다운.
+  // 이미 incoming이 떠서 회피 문구를 입력해야 하는 동안에는 보여줄 필요가 없다.
+  const secondsToNextAttack = !incoming
+    ? Math.max(0, Math.ceil((nextAttackAtRef.current - now) / 1000))
+    : null;
+
   return {
     playerHp,
     playerMaxHp: stats.maxHp,
@@ -263,6 +269,7 @@ export function useCombat(
     typed,
     activeTarget,
     timeRemainingRatio,
+    secondsToNextAttack,
     log,
     result,
     lastHitFlash,

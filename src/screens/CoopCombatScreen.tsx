@@ -37,6 +37,7 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
     typed,
     activeTarget,
     timeRemainingRatio,
+    secondsToNextAttack,
     log,
     playerAnim,
     monsterAnim,
@@ -238,6 +239,12 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
           </div>
         ))}
       </div>
+
+      {secondsToNextAttack !== null && secondsToNextAttack <= 3 && (
+        <div className="attack-warning">
+          {secondsToNextAttack}초 뒤 {monster.name} 공격!
+        </div>
+      )}
     </div>
   );
 }
