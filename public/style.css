@@ -380,6 +380,15 @@ button {
     linear-gradient(180deg, rgba(31,37,66,0.55) 0%, rgba(13,15,27,0.15) 60%, rgba(8,9,17,0.5) 100%);
 }
 
+/* 보스전은 평범한 몬스터전과 똑같은 배경이면 밋밋해 보이니, 더 어둡고 위협적인
+   붉은/보라 톤의 전용 배경을 쓴다. */
+.battle-stage.boss::before {
+  background:
+    radial-gradient(ellipse 70% 40% at 50% 100%, rgba(255,90,60,0.16), transparent 70%),
+    linear-gradient(180deg, rgba(70,20,40,0.6) 0%, rgba(20,10,22,0.2) 55%, rgba(10,5,12,0.55) 100%);
+}
+.battle-stage.boss { box-shadow: inset 0 0 60px rgba(180,30,30,0.22); }
+
 .battle-ground {
   position: absolute;
   left: 8%;
@@ -832,8 +841,36 @@ button {
   pointer-events: none;
 }
 
+.boss-gate {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+/* 포털 뒤에 세워 둔 보스 실루엣. 포털 원 바로 위, 중앙에 크게 떠 있어서 멀리서도
+   "저기 보스가 있다"는 게 한눈에 보인다. */
+.boss-silhouette {
+  position: absolute;
+  left: 50%;
+  bottom: 44px;
+  transform: translateX(-50%);
+  z-index: 1;
+  filter: drop-shadow(0 8px 10px rgba(0,0,0,0.5));
+  animation: boss-idle-bob 2.8s ease-in-out infinite;
+}
+.boss-silhouette.locked {
+  filter: grayscale(0.9) brightness(0.35) drop-shadow(0 8px 10px rgba(0,0,0,0.5));
+}
+@keyframes boss-idle-bob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-5px); }
+}
+
 .dungeon-portal {
   position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1129,6 +1166,28 @@ button {
   color: var(--accent-gold);
   letter-spacing: 0.03em;
   margin-top: -4px;
+  animation: boss-banner-intro 0.6s ease-out, boss-banner-glow 1.6s ease-in-out 0.6s infinite;
+}
+@keyframes boss-banner-intro {
+  0% { transform: scale(1.8); opacity: 0; letter-spacing: 0.3em; }
+  100% { transform: scale(1); opacity: 1; letter-spacing: 0.03em; }
+}
+@keyframes boss-banner-glow {
+  0%, 100% { text-shadow: 0 0 4px rgba(212,175,106,0.4); }
+  50% { text-shadow: 0 0 14px rgba(212,175,106,0.9); }
+}
+
+/* 보스 체력이 낮아지면(분노) 더 빠르고 사납게 공격한다는 걸 시각적으로도 알려준다. */
+.enrage-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.72rem;
+  color: #ff5b5b;
+  animation: enrage-pulse 0.7s ease-in-out infinite;
+}
+@keyframes enrage-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 /* ---------- Login / Resume / Guild ---------- */

@@ -67,6 +67,8 @@ export interface EncounterState {
   monsterDebuffUntil?: number;
   /** pendingAttack이 없을 때 다음 공격이 시작될 예정 시각 (없으면 null) */
   nextAttackAt?: number | null;
+  /** 보스 체력이 낮아져 공격이 빨라진 상태인지 */
+  isEnraged?: boolean;
 }
 
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";

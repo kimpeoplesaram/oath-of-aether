@@ -34,6 +34,7 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
     bursts,
     shake,
     critFlash,
+    isEnraged,
     handleInputChange,
   } = useCombat(player, monster, startHp, stats);
 
@@ -49,7 +50,11 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
 
   return (
     <div className="panel combat-screen">
-      <div className={`battle-stage${shake === "small" ? " shake-small" : shake === "big" ? " shake-big" : ""}`}>
+      <div
+        className={`battle-stage${monster.isBoss ? " boss" : ""}${
+          shake === "small" ? " shake-small" : shake === "big" ? " shake-big" : ""
+        }`}
+      >
         <div className="battle-embers" aria-hidden>
           {Array.from({ length: 10 }).map((_, i) => (
             <span key={i} className="ember" />
@@ -96,7 +101,12 @@ export function CombatScreen({ player, monster, startHp, stats, onResolved }: Pr
         </div>
       </div>
       {critFlash && <div className="combat-flash" />}
-      {monster.isBoss && <div className="boss-banner">⚔ 보스전: {monster.name}</div>}
+      {monster.isBoss && (
+        <div className="boss-banner">
+          ⚔ 보스전: {monster.name}
+          {isEnraged && <span className="enrage-tag">⚡ 분노 상태! 공격이 빨라졌습니다</span>}
+        </div>
+      )}
 
       <div className="combatants">
         <div className="combatant-card player">

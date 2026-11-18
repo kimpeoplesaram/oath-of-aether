@@ -72,7 +72,11 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
 
   return (
     <div className="panel combat-screen">
-      <div className={`battle-stage coop${shake === "small" ? " shake-small" : shake === "big" ? " shake-big" : ""}`}>
+      <div
+        className={`battle-stage coop${monster.isBoss ? " boss" : ""}${
+          shake === "small" ? " shake-small" : shake === "big" ? " shake-big" : ""
+        }`}
+      >
         <div className="battle-embers" aria-hidden>
           {Array.from({ length: 10 }).map((_, i) => (
             <span key={i} className="ember" />
@@ -135,7 +139,12 @@ export function CoopCombatScreen({ mp, instanceId, monsterId, player, stats, onL
         </div>
       </div>
       {critFlash && <div className="combat-flash" />}
-      {monster.isBoss && <div className="boss-banner">⚔ 보스전: {monster.name}</div>}
+      {monster.isBoss && (
+        <div className="boss-banner">
+          ⚔ 보스전: {monster.name}
+          {enc.isEnraged && <span className="enrage-tag">⚡ 분노 상태! 공격이 빨라졌습니다</span>}
+        </div>
+      )}
 
       <div className="party-hp-row">
         {enc.participants.map((p) => (

@@ -20,6 +20,7 @@ export const MONSTERS = {
     ],
   },
   forest_guardian: {
+    isBoss: true,
     name: "숲의 수호자",
     hp: 320,
     attackIntervalMs: 6500,
@@ -30,6 +31,7 @@ export const MONSTERS = {
     ],
   },
   ice_wraith: {
+    isBoss: true,
     name: "얼음 망령",
     hp: 380,
     attackIntervalMs: 6500,
@@ -40,6 +42,7 @@ export const MONSTERS = {
     ],
   },
   lava_golem: {
+    isBoss: true,
     name: "용암 골렘",
     hp: 460,
     attackIntervalMs: 7000,

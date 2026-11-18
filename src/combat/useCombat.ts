@@ -62,6 +62,16 @@ export function useCombat(
   const nextAttackAtRef = useRef(Date.now() + monsterDef.attackIntervalMs);
   const incomingRef = useRef(incoming);
   incomingRef.current = incoming;
+  const monsterHpRef = useRef(monsterHp);
+  monsterHpRef.current = monsterHp;
+
+  // 보스는 체력이 30% 이하로 떨어지면 "분노"해서 공격 주기가 짧아진다. 일반
+  // 몬스터전과 달리 보스전만 뒤로 갈수록 더 긴박해지도록 하기 위한 장치.
+  const isEnraged = monsterDef.isBoss && monsterHp > 0 && monsterHp / monsterDef.hp <= 0.3;
+  const nextAttackInterval = useCallback(() => {
+    const enraged = monsterDef.isBoss && monsterHpRef.current > 0 && monsterHpRef.current / monsterDef.hp <= 0.3;
+    return enraged ? Math.round(monsterDef.attackIntervalMs * 0.55) : monsterDef.attackIntervalMs;
+  }, [monsterDef]);
 
   // 기본 공격력 대비 추가된 만큼을 스킬 피해에 그대로 더해, 레벨업/장비가 전투에 체감되게 한다.
   const atkBonus = stats.atk - player.job.baseAtk;
@@ -128,11 +138,11 @@ export function useCombat(
         setIncoming(null);
         incomingRef.current = null;
         setTyped("");
-        nextAttackAtRef.current = Date.now() + monsterDef.attackIntervalMs;
+        nextAttackAtRef.current = Date.now() + nextAttackInterval();
       }
     }, 50);
     return () => clearInterval(id);
-  }, [result, monsterDef, pushLog, flash, triggerMonsterAnim, pushPopup, triggerBurst, triggerShake, triggerFlash]);
+  }, [result, monsterDef, pushLog, flash, triggerMonsterAnim, pushPopup, triggerBurst, triggerShake, triggerFlash, nextAttackInterval]);
 
   // 승패 판정
   useEffect(() => {
@@ -174,7 +184,7 @@ export function useCombat(
           triggerPlayerAnim("dodge");
           setIncoming(null);
           incomingRef.current = null;
-          nextAttackAtRef.current = Date.now() + monsterDef.attackIntervalMs;
+          nextAttackAtRef.current = Date.now() + nextAttackInterval();
         } else {
           const buffActive = Date.now() < buffUntil;
           const effect = resolveSkillEffect(currentSkill, atkBonus);
@@ -246,6 +256,7 @@ export function useCombat(
       triggerBurst,
       triggerShake,
       triggerFlash,
+      nextAttackInterval,
     ]
   );
 
@@ -279,6 +290,7 @@ export function useCombat(
     bursts,
     shake,
     critFlash,
+    isEnraged,
     handleInputChange,
     buffActive: Date.now() < buffUntil,
     debuffActive: Date.now() < debuffUntil,

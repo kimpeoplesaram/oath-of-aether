@@ -364,21 +364,23 @@ export function OverworldScreen({
           {DUNGEON_PORTALS.map((portal) => {
             const isTarget = target?.kind === "portal" && target.instanceId === portal.instanceId;
             return (
-              <div
-                key={portal.instanceId}
-                className={`dungeon-portal${questsComplete ? " unlocked" : " locked"}${isTarget ? " targetable" : ""}`}
-                style={{
-                  left: portal.x,
-                  top: portal.y,
-                  width: portal.size,
-                  height: portal.size,
-                }}
-                title={questsComplete ? `던전 입구: ${portal.name}` : "모든 퀘스트를 완료해야 열립니다"}
-              >
-                <span className="dungeon-portal-icon">{questsComplete ? "🌀" : "🔒"}</span>
-                {isTarget && (
-                  <div className="interact-prompt">{questsComplete ? "E 입장" : "🔒 잠김"}</div>
-                )}
+              <div key={portal.instanceId} className="boss-gate" style={{ left: portal.x, top: portal.y }}>
+                {/* 포털 아이콘만 있으면 보스가 맵에 전혀 안 보여서 밋밋하니, 포털 뒤에
+                    실제 보스 실루엣을 크게 세워 둔다. 잠겨 있을 때는 어둡게, 열리면
+                    또렷하게 보여서 "저게 보스구나"를 바로 알 수 있게 한다. */}
+                <div className={`boss-silhouette${questsComplete ? "" : " locked"}`}>
+                  <MonsterSprite kind={portal.monsterId} scale={7} moving={false} />
+                </div>
+                <div
+                  className={`dungeon-portal${questsComplete ? " unlocked" : " locked"}${isTarget ? " targetable" : ""}`}
+                  style={{ width: portal.size, height: portal.size }}
+                  title={questsComplete ? `던전 입구: ${portal.name}` : "모든 퀘스트를 완료해야 열립니다"}
+                >
+                  <span className="dungeon-portal-icon">{questsComplete ? "🌀" : "🔒"}</span>
+                  {isTarget && (
+                    <div className="interact-prompt">{questsComplete ? "E 입장" : "🔒 잠김"}</div>
+                  )}
+                </div>
               </div>
             );
           })}

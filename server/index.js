@@ -113,6 +113,19 @@ function encounterKey(room, instanceId) {
   return `${room}::${instanceId}`;
 }
 
+// 보스는 체력이 30% 이하로 떨어지면 분노해서 공격 주기가 짧아진다 (클라이언트의
+// 솔로 전투와 동일한 규칙). enc.monsterHp/enc.monsterMaxHp 기준으로 판단한다.
+function isEncounterEnraged(enc) {
+  const def = MONSTERS[enc.monsterId];
+  return !!def?.isBoss && enc.monsterHp > 0 && enc.monsterHp / enc.monsterMaxHp <= 0.3;
+}
+
+function nextAttackDelay(enc) {
+  const def = MONSTERS[enc.monsterId];
+  const base = def.attackIntervalMs;
+  return isEncounterEnraged(enc) ? Math.round(base * 0.55) : base;
+}
+
 function socketsInRoom(code) {
   return Array.from(socketMeta.entries()).filter(([, meta]) => meta.room === code);
 }
@@ -159,6 +172,7 @@ function broadcastEncounter(key) {
     // pendingAttack이 아직 없을 때, 클라이언트가 "N초 뒤 공격!" 같은 예고 표시를
     // 미리 보여줄 수 있도록 다음 공격 예정 시각도 함께 보낸다.
     nextAttackAt: enc.pendingAttack ? null : enc.nextAttackAt,
+    isEnraged: isEncounterEnraged(enc),
   };
   const json = JSON.stringify(payload);
   for (const id of enc.participants.keys()) {
@@ -298,7 +312,7 @@ setInterval(() => {
         target.hp = Math.max(0, target.hp - dmg);
       }
       enc.pendingAttack = null;
-      enc.nextAttackAt = now + MONSTERS[enc.monsterId].attackIntervalMs;
+      enc.nextAttackAt = now + nextAttackDelay(enc);
 
       const allDown = Array.from(enc.participants.values()).every((p) => p.hp <= 0);
       if (allDown) {
@@ -761,7 +775,7 @@ wss.on("connection", (ws) => {
       const enc = encounters.get(key);
       if (!enc || !enc.pendingAttack || enc.pendingAttack.targetId !== meta.id) return;
       enc.pendingAttack = null;
-      enc.nextAttackAt = Date.now() + MONSTERS[enc.monsterId].attackIntervalMs;
+      enc.nextAttackAt = Date.now() + nextAttackDelay(enc);
       broadcastEncounter(key);
       return;
     }
