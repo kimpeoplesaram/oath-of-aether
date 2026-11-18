@@ -107,6 +107,9 @@ export function OverworldScreen({
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const pressedKeys = useRef<Set<string>>(new Set());
+  // 키를 누르자마자 최고 속도로 튀어나가는 대신, 가속/감속을 둬서 걸음이 더
+  // 자연스럽게 붙었다 떨어지도록 하는 현재 속도(벡터).
+  const velocityRef = useRef({ vx: 0, vy: 0 });
   const encounterLockRef = useRef(false);
   const targetRef = useRef<Interactable | null>(null);
   targetRef.current = target;
@@ -177,18 +180,36 @@ export function OverworldScreen({
         dy += m.dy;
         newDir = m.dir;
       }
-
-      const isMoving = dx !== 0 || dy !== 0;
-      if (dx !== 0 || dy !== 0) {
+      const hasInput = dx !== 0 || dy !== 0;
+      if (hasInput) {
         const len = Math.hypot(dx, dy) || 1;
-        const step = PLAYER_SPEED * dt;
-        setPos((p) => ({
-          x: Math.max(0, Math.min(MAP_WIDTH - PLAYER_SIZE, p.x + (dx / len) * step)),
-          y: Math.max(0, Math.min(MAP_HEIGHT - PLAYER_SIZE, p.y + (dy / len) * step)),
-        }));
-        if (newDir) setDirection(newDir);
+        dx /= len;
+        dy /= len;
       }
-      setMoving(isMoving);
+
+      // 목표 속도(입력 방향 * 최고 속도)로 즉시 점프하지 않고, 지수 감쇠로 부드럽게
+      // 다가가게 한다. 멈출 때도 마찬가지로 서서히 속도가 줄어들어 미끄러지듯
+      // 멈춰서, 딱딱하게 뚝 끊기던 기존 움직임보다 훨씬 자연스럽다.
+      const targetVx = dx * PLAYER_SPEED;
+      const targetVy = dy * PLAYER_SPEED;
+      const rate = hasInput ? 14 : 18; // 멈출 때(감속)는 출발할 때보다 조금 더 빠르게 줄인다
+      const smoothing = 1 - Math.exp(-rate * dt);
+      const v = velocityRef.current;
+      v.vx += (targetVx - v.vx) * smoothing;
+      v.vy += (targetVy - v.vy) * smoothing;
+
+      const speed = Math.hypot(v.vx, v.vy);
+      if (speed > 0.5) {
+        setPos((p) => ({
+          x: Math.max(0, Math.min(MAP_WIDTH - PLAYER_SIZE, p.x + v.vx * dt)),
+          y: Math.max(0, Math.min(MAP_HEIGHT - PLAYER_SIZE, p.y + v.vy * dt)),
+        }));
+      } else {
+        v.vx = 0;
+        v.vy = 0;
+      }
+      if (hasInput && newDir) setDirection(newDir);
+      setMoving(hasInput);
 
       raf = requestAnimationFrame(tick);
     }
@@ -378,13 +399,20 @@ export function OverworldScreen({
           })}
 
           {remotePlayers.map((rp) => (
-            <div key={rp.id} className="overworld-entity remote-entity" style={{ left: rp.x, top: rp.y }}>
+            <div
+            key={rp.id}
+            className={`overworld-entity remote-entity${rp.moving ? " walking" : ""}`}
+            style={{ left: rp.x, top: rp.y }}
+          >
               <span className="remote-name-tag">{rp.name}</span>
               <CharacterSprite kind={rp.jobId} direction={rp.dir} moving={rp.moving} scale={3.8} />
             </div>
           ))}
 
-          <div className="overworld-entity player-entity" style={{ left: pos.x, top: pos.y }}>
+          <div
+            className={`overworld-entity player-entity${moving ? " walking" : ""}`}
+            style={{ left: pos.x, top: pos.y }}
+          >
             <CharacterSprite kind={player.job.id} direction={direction} moving={moving} scale={3.8} />
           </div>
         </div>
